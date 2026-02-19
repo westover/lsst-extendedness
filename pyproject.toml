@@ -175,7 +175,6 @@ select = [
     "UP",     # pyupgrade
     "ARG",    # flake8-unused-arguments
     "SIM",    # flake8-simplify
-    "TCH",    # flake8-type-checking
     "PTH",    # flake8-use-pathlib
     "RUF",    # Ruff-specific rules
 ]
@@ -188,9 +187,6 @@ ignore = [
     "SIM103", # Return condition directly (less readable)
     "SIM108", # Use ternary operator (less readable in many cases)
     "PTH123", # open() vs Path.open() (both are fine)
-    "TCH001", # Move application import into type-checking block (too aggressive)
-    "TCH002", # Move third-party import into type-checking block (too aggressive)
-    "TCH003", # Move stdlib import into type-checking block (too aggressive)
 ]
 
 [tool.ruff.lint.isort]
@@ -204,7 +200,6 @@ known-first-party = ["lsst_extendedness"]
     "B905",    # zip without strict= (not needed in tests)
     "F401",    # Unused imports (optional dependency checks)
     "F841",    # Unused variables (test setup)
-    "RUF059",  # Unused unpacked variables (common in tests)
     "S101",    # Use of assert
 ]
 
