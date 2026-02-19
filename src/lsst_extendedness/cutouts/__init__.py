@@ -5,8 +5,8 @@ This module handles extraction and management of FITS cutouts from alerts:
 
 - Extract science, template, and difference cutouts
 - Validate FITS data integrity
-- Generate thumbnails (optional)
-- Calculate cutout statistics
+- Organize by date or object
+- Compress for storage efficiency
 
 Cutout Types:
 - Science: Direct observation image
@@ -14,16 +14,36 @@ Cutout Types:
 - Difference: Subtraction result showing transients
 
 Example:
-    >>> from lsst_extendedness.cutouts import CutoutProcessor
+    >>> from lsst_extendedness.cutouts import CutoutProcessor, CutoutConfig
     >>>
-    >>> processor = CutoutProcessor(output_dir="data/cutouts")
-    >>> paths = processor.extract_all(alert, dia_source_id="12345")
-    >>> print(f"Saved cutouts to: {paths}")
+    >>> config = CutoutConfig(output_dir=Path("data/cutouts"))
+    >>> processor = CutoutProcessor(config)
+    >>>
+    >>> paths = processor.process_alert(alert, avro_record)
+    >>> print(f"Science cutout: {paths.science}")
+    >>> print(f"Template cutout: {paths.template}")
+    >>> print(f"Difference cutout: {paths.difference}")
+
+Batch processing:
+    >>> results = processor.process_batch([(alert1, avro1), (alert2, avro2)])
+
+Loading cutouts:
+    >>> from lsst_extendedness.cutouts import load_cutout_as_array
+    >>> image_data = load_cutout_as_array(paths.science)
 """
 
-from lsst_extendedness.cutouts.processor import CutoutProcessor, extract_all_cutouts
+from lsst_extendedness.cutouts.processor import (
+    CutoutConfig,
+    CutoutPaths,
+    CutoutProcessor,
+    extract_cutout_stamps,
+    load_cutout_as_array,
+)
 
 __all__ = [
+    "CutoutConfig",
+    "CutoutPaths",
     "CutoutProcessor",
-    "extract_all_cutouts",
+    "extract_cutout_stamps",
+    "load_cutout_as_array",
 ]

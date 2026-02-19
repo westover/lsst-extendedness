@@ -11,37 +11,45 @@ This module provides SQL-based filtering of alerts:
 Filter results are stored in `alerts_filtered` table with references
 to the original raw alerts for reproducibility.
 
-Example:
-    >>> from lsst_extendedness.filter import FilterEngine, FilterConfig
+Example using quick filter:
+    >>> from lsst_extendedness.filter import FilterEngine
     >>>
-    >>> config = FilterConfig(
+    >>> engine = FilterEngine(storage)
+    >>> df = engine.filter(
     ...     extendedness_min=0.3,
     ...     extendedness_max=0.7,
-    ...     require_sso=True,
+    ...     has_sso=True,
     ... )
+    >>> print(f"Found {len(df)} alerts")
+
+Example using FilterConfig:
+    >>> from lsst_extendedness.filter import FilterConfig, FilterCondition
     >>>
-    >>> engine = FilterEngine(storage, config)
-    >>> filtered_count = engine.apply_filter()
-    >>> print(f"Filtered to {filtered_count} alerts")
+    >>> config = FilterConfig(name="my_filter")
+    >>> config.add(FilterCondition.ge("snr", 10))
+    >>> config.add(FilterCondition.between("extendedness_median", 0.3, 0.7))
+    >>>
+    >>> df = engine.apply(config)
 
 Presets are available for common use cases:
-    >>> from lsst_extendedness.filter.presets import MINIMOON_CANDIDATE
-    >>> engine = FilterEngine(storage, MINIMOON_CANDIDATE)
+    >>> from lsst_extendedness.filter import presets
+    >>>
+    >>> config = presets.minimoon_candidates()
+    >>> df = engine.apply(config)
 """
 
-from lsst_extendedness.filter.engine import FilterEngine, FilterConfig
-from lsst_extendedness.filter.presets import (
-    POINT_SOURCES,
-    EXTENDED_SOURCES,
-    SSO_ASSOCIATED,
-    MINIMOON_CANDIDATE,
+from lsst_extendedness.filter.engine import (
+    FilterCondition,
+    FilterConfig,
+    FilterEngine,
+    FilterOperator,
 )
+from lsst_extendedness.filter import presets
 
 __all__ = [
-    "FilterEngine",
+    "FilterCondition",
     "FilterConfig",
-    "POINT_SOURCES",
-    "EXTENDED_SOURCES",
-    "SSO_ASSOCIATED",
-    "MINIMOON_CANDIDATE",
+    "FilterEngine",
+    "FilterOperator",
+    "presets",
 ]
