@@ -283,6 +283,325 @@ def ingest(
         console.print(f"  Duration: {run.duration_seconds:.1f}s ({rate:.0f} alerts/sec)")
 
 
+@main.command("process")
+@click.option(
+    "--processor",
+    "-p",
+    help="Specific processor to run (default: all)",
+)
+@click.option(
+    "--window",
+    "-w",
+    type=int,
+    default=15,
+    help="Time window in days",
+)
+@click.option(
+    "--list",
+    "list_processors",
+    is_flag=True,
+    help="List available processors",
+)
+@click.option(
+    "--no-save",
+    is_flag=True,
+    help="Don't save results to database",
+)
+@click.pass_context
+def process(
+    ctx: click.Context,
+    processor: str | None,
+    window: int,
+    list_processors: bool,
+    no_save: bool,
+) -> None:
+    """Run post-processing on accumulated alerts.
+
+    Executes registered processors to analyze alert data.
+    Results are stored in the processing_results table.
+    """
+    settings = ctx.obj["settings"]
+    logger = get_logger(__name__)
+
+    # Initialize storage
+    db_path = settings.database_path
+    if not db_path.exists():
+        console.print(f"[red]Database not found:[/red] {db_path}")
+        console.print("Run 'lsst-extendedness db-init' and ingest data first.")
+        return
+
+    storage = SQLiteStorage(db_path)
+
+    from lsst_extendedness.processing import ProcessingRunner
+
+    runner = ProcessingRunner(storage)
+
+    # List processors if requested
+    if list_processors:
+        table = Table(title="Available Processors")
+        table.add_column("Name", style="cyan")
+        table.add_column("Version", style="green")
+        table.add_column("Description")
+
+        for info in runner.list_processors():
+            table.add_row(info["name"], info["version"], info["description"])
+
+        console.print(table)
+        storage.close()
+        return
+
+    console.print("[bold]LSST Extendedness Pipeline - Processing[/bold]")
+    console.print(f"Window: [cyan]{window} days[/cyan]")
+
+    save_results = not no_save
+
+    if processor:
+        # Run specific processor
+        console.print(f"Processor: [cyan]{processor}[/cyan]")
+
+        with console.status(f"[bold green]Running {processor}..."):
+            result = runner.run(
+                processor,
+                window_days=window,
+                save_result=save_results,
+            )
+
+        if result.success:
+            console.print(f"[green]✓[/green] {result.result.summary}")
+            console.print(f"  Records: {len(result.result.records)}")
+            console.print(f"  Duration: {result.elapsed_seconds:.2f}s")
+        else:
+            console.print(f"[red]✗[/red] Failed: {result.error_message}")
+
+    else:
+        # Run all processors
+        with console.status("[bold green]Running all processors..."):
+            batch_result = runner.run_all(
+                window_days=window,
+                save_results=save_results,
+            )
+
+        console.print()
+        console.print("[bold]Processing Results[/bold]")
+
+        for result in batch_result.results:
+            if result.success:
+                console.print(
+                    f"  [green]✓[/green] {result.processor_name}: "
+                    f"{result.result.summary}"
+                )
+            else:
+                console.print(
+                    f"  [red]✗[/red] {result.processor_name}: "
+                    f"{result.error_message}"
+                )
+
+        console.print()
+        console.print(
+            f"Completed: {batch_result.success_count} succeeded, "
+            f"{batch_result.failure_count} failed "
+            f"({batch_result.total_elapsed_seconds:.2f}s)"
+        )
+
+    storage.close()
+
+
+@main.command("query")
+@click.option(
+    "--today",
+    "query_today",
+    is_flag=True,
+    help="Query today's alerts",
+)
+@click.option(
+    "--recent",
+    type=int,
+    help="Query recent N days",
+)
+@click.option(
+    "--minimoon",
+    is_flag=True,
+    help="Query minimoon candidates",
+)
+@click.option(
+    "--sso",
+    is_flag=True,
+    help="Query SSO alerts",
+)
+@click.option(
+    "--sql",
+    help="Custom SQL query",
+)
+@click.option(
+    "--export",
+    type=click.Path(path_type=Path),
+    help="Export results to file",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=100,
+    help="Limit results",
+)
+@click.pass_context
+def query(
+    ctx: click.Context,
+    query_today: bool,
+    recent: int | None,
+    minimoon: bool,
+    sso: bool,
+    sql: str | None,
+    export: Path | None,
+    limit: int,
+) -> None:
+    """Query the alert database.
+
+    Provides shortcuts for common queries and custom SQL support.
+    """
+    settings = ctx.obj["settings"]
+
+    db_path = settings.database_path
+    if not db_path.exists():
+        console.print(f"[red]Database not found:[/red] {db_path}")
+        return
+
+    storage = SQLiteStorage(db_path)
+
+    from lsst_extendedness.query import shortcuts
+
+    # Determine query
+    if sql:
+        df = shortcuts.custom(sql, storage=storage)
+        title = "Custom Query"
+    elif query_today:
+        df = shortcuts.today(storage=storage)
+        title = "Today's Alerts"
+    elif recent:
+        df = shortcuts.recent(days=recent, storage=storage)
+        title = f"Last {recent} Days"
+    elif minimoon:
+        df = shortcuts.minimoon_candidates(storage=storage)
+        title = "Minimoon Candidates"
+    elif sso:
+        df = shortcuts.sso_alerts(storage=storage)
+        title = "SSO Alerts"
+    else:
+        # Default: show stats
+        stats = shortcuts.stats(storage=storage)
+        console.print("[bold]Database Summary[/bold]")
+        for key, value in stats.items():
+            if isinstance(value, dict):
+                console.print(f"  {key}:")
+                for k, v in value.items():
+                    console.print(f"    {k}: {v}")
+            else:
+                console.print(f"  {key}: {value}")
+        storage.close()
+        return
+
+    # Apply limit
+    if len(df) > limit:
+        df = df.head(limit)
+        console.print(f"[yellow]Showing first {limit} of {len(df)} results[/yellow]")
+
+    # Export or display
+    if export:
+        from lsst_extendedness.query.export import export_dataframe
+
+        fmt = export.suffix.lstrip(".") or "csv"
+        export_dataframe(df, export, format=fmt)
+        console.print(f"[green]Exported to:[/green] {export}")
+    else:
+        console.print(f"[bold]{title}[/bold] ({len(df)} rows)")
+        console.print()
+
+        # Display as table
+        if len(df) > 0:
+            table = Table(show_lines=True)
+            for col in df.columns[:10]:  # Limit columns
+                table.add_column(str(col), overflow="fold")
+
+            for _, row in df.head(20).iterrows():
+                table.add_row(*[str(v)[:50] for v in row.values[:10]])
+
+            console.print(table)
+
+            if len(df) > 20:
+                console.print(f"[dim]... and {len(df) - 20} more rows[/dim]")
+
+    storage.close()
+
+
+@main.command("export")
+@click.option(
+    "--type",
+    "export_type",
+    type=click.Choice(["today", "recent", "minimoon", "sso", "results"]),
+    default="today",
+    help="Type of export",
+)
+@click.option(
+    "--days",
+    type=int,
+    default=7,
+    help="Days for recent export",
+)
+@click.option(
+    "--format",
+    "fmt",
+    type=click.Choice(["csv", "parquet", "json"]),
+    default="csv",
+    help="Output format",
+)
+@click.option(
+    "--output-dir",
+    type=click.Path(path_type=Path),
+    default="exports",
+    help="Output directory",
+)
+@click.pass_context
+def export_cmd(
+    ctx: click.Context,
+    export_type: str,
+    days: int,
+    fmt: str,
+    output_dir: Path,
+) -> None:
+    """Export data to files."""
+    settings = ctx.obj["settings"]
+
+    db_path = settings.database_path
+    if not db_path.exists():
+        console.print(f"[red]Database not found:[/red] {db_path}")
+        return
+
+    storage = SQLiteStorage(db_path)
+
+    from lsst_extendedness.query.export import DataExporter
+
+    exporter = DataExporter(storage, output_dir, default_format=fmt)
+
+    console.print(f"[bold]Exporting {export_type}...[/bold]")
+
+    if export_type == "today":
+        path = exporter.today()
+    elif export_type == "recent":
+        path = exporter.recent(days=days)
+    elif export_type == "minimoon":
+        path = exporter.minimoon_candidates()
+    elif export_type == "sso":
+        path = exporter.sso_summary()
+    elif export_type == "results":
+        path = exporter.processing_results()
+    else:
+        console.print(f"[red]Unknown export type:[/red] {export_type}")
+        storage.close()
+        return
+
+    console.print(f"[green]Exported to:[/green] {path}")
+    storage.close()
+
+
 @main.command("health-check")
 @click.pass_context
 def health_check(ctx: click.Context) -> None:
@@ -300,7 +619,8 @@ def health_check(ctx: click.Context) -> None:
     db_path = settings.database_path
     if db_path.exists():
         storage = SQLiteStorage(db_path)
-        count = storage.get_alert_count()
+        stats = storage.get_stats()
+        count = stats.get("alerts_raw_count", 0)
         console.print(f"Database: [green]OK[/green] ({count:,} alerts)")
         storage.close()
     else:
@@ -312,6 +632,20 @@ def health_check(ctx: click.Context) -> None:
         console.print("Kafka client: [green]Installed[/green]")
     except ImportError:
         console.print("Kafka client: [yellow]Not installed[/yellow]")
+
+    # Check pandas
+    try:
+        import pandas
+        console.print(f"Pandas: [green]{pandas.__version__}[/green]")
+    except ImportError:
+        console.print("Pandas: [red]Not installed[/red]")
+
+    # Check numpy BLAS
+    try:
+        import numpy as np
+        console.print(f"NumPy: [green]{np.__version__}[/green]")
+    except ImportError:
+        console.print("NumPy: [red]Not installed[/red]")
 
     console.print()
     console.print("[green]Health check complete[/green]")
