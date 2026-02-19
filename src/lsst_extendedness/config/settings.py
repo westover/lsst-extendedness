@@ -235,7 +235,7 @@ def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
             continue
 
         # Remove prefix and convert to lowercase
-        config_key = key[len(prefix):].lower()
+        config_key = key[len(prefix) :].lower()
 
         # Handle nested keys (e.g., LSST_KAFKA_TOPIC -> kafka.topic)
         parts = config_key.split("_")

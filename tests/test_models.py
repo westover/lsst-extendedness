@@ -7,7 +7,6 @@ Tests the Pydantic models for:
 - IngestionRun lifecycle
 """
 
-
 import pytest
 
 from lsst_extendedness.models import AlertRecord, IngestionRun, ProcessingResult

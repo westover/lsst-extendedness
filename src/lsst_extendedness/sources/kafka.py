@@ -32,7 +32,7 @@ _confluent_kafka = None
 _fastavro = None
 
 
-def _import_kafka():
+def _import_kafka() -> Any:
     """Lazy import of confluent-kafka."""
     global _confluent_kafka
     if _confluent_kafka is None:
@@ -42,12 +42,12 @@ def _import_kafka():
             _confluent_kafka = confluent_kafka
         except ImportError as e:
             raise ImportError(
-                "confluent-kafka is required for KafkaSource. " "Install with: pdm install"
+                "confluent-kafka is required for KafkaSource. Install with: pdm install"
             ) from e
     return _confluent_kafka
 
 
-def _import_fastavro():
+def _import_fastavro() -> Any:
     """Lazy import of fastavro."""
     global _fastavro
     if _fastavro is None:
@@ -57,7 +57,7 @@ def _import_fastavro():
             _fastavro = fastavro
         except ImportError as e:
             raise ImportError(
-                "fastavro is required for KafkaSource. " "Install with: pdm install"
+                "fastavro is required for KafkaSource. Install with: pdm install"
             ) from e
     return _fastavro
 
@@ -121,7 +121,8 @@ class KafkaSource:
         self._consumer = kafka.Consumer(self.config)
 
         # Subscribe to topic
-        self._consumer.subscribe([self.topic])
+        if self._consumer is not None:
+            self._consumer.subscribe([self.topic])
 
         self._connected = True
 

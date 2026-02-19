@@ -53,10 +53,10 @@ jobs:
           pdm install -G dev
 
       - name: Run Ruff linter
-        run: pdm run ruff check src/ tests/
+        run: pdm run ruff check src/lsst_extendedness/ tests/
 
       - name: Run Ruff formatter check
-        run: pdm run ruff format src/ tests/ --check
+        run: pdm run ruff format src/lsst_extendedness/ tests/ --check
 
       - name: Run mypy
         run: pdm run mypy src/

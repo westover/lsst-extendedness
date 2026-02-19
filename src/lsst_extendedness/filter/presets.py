@@ -6,6 +6,9 @@ Common filter configurations for typical science use cases.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from .engine import FilterCondition, FilterConfig
 
 
@@ -216,7 +219,7 @@ def unprocessed(limit: int | None = None) -> FilterConfig:
 
 
 # Dictionary of all presets for easy access
-PRESETS = {
+PRESETS: dict[str, Callable[..., FilterConfig]] = {
     "point_sources": point_sources,
     "extended_sources": extended_sources,
     "minimoon_candidates": minimoon_candidates,
@@ -227,7 +230,7 @@ PRESETS = {
 }
 
 
-def get_preset(name: str, **kwargs) -> FilterConfig:
+def get_preset(name: str, **kwargs: Any) -> FilterConfig:
     """Get a preset filter by name.
 
     Args:

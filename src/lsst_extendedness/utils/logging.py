@@ -58,12 +58,14 @@ def setup_logging(
         processors.append(structlog.processors.TimeStamper(fmt="iso"))
 
     if include_location:
-        processors.append(structlog.processors.CallsiteParameterAdder(
-            [
-                structlog.processors.CallsiteParameter.FILENAME,
-                structlog.processors.CallsiteParameter.LINENO,
-            ]
-        ))
+        processors.append(
+            structlog.processors.CallsiteParameterAdder(
+                [
+                    structlog.processors.CallsiteParameter.FILENAME,
+                    structlog.processors.CallsiteParameter.LINENO,
+                ]
+            )
+        )
 
     processors.append(structlog.stdlib.PositionalArgumentsFormatter())
     processors.append(structlog.processors.StackInfoRenderer())
@@ -73,10 +75,12 @@ def setup_logging(
     if format == "json":
         processors.append(structlog.processors.JSONRenderer())
     else:
-        processors.append(structlog.dev.ConsoleRenderer(
-            colors=True,
-            exception_formatter=structlog.dev.plain_traceback,
-        ))
+        processors.append(
+            structlog.dev.ConsoleRenderer(
+                colors=True,
+                exception_formatter=structlog.dev.plain_traceback,
+            )
+        )
 
     # Configure structlog
     structlog.configure(
@@ -101,7 +105,8 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
         >>> logger = get_logger(__name__)
         >>> logger.info("Processing started", source="kafka")
     """
-    return structlog.get_logger(name)
+    logger: structlog.stdlib.BoundLogger = structlog.get_logger(name)
+    return logger
 
 
 def bind_context(**kwargs: Any) -> None:

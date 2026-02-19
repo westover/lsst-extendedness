@@ -116,7 +116,7 @@ class BaseProcessor(ABC):
             ORDER BY mjd ASC
         """
 
-    def get_query_params(self, start_mjd: float, end_mjd: float) -> tuple:
+    def get_query_params(self, start_mjd: float, end_mjd: float) -> tuple[Any, ...]:
         """Parameters for the data query.
 
         Args:
@@ -278,9 +278,9 @@ class FilteringProcessor(BaseProcessor):
         Returns:
             ProcessingResult with filtered records
         """
-        records = []
+        records: list[dict[str, Any]] = []
         for _, row in df.iterrows():
-            row_dict = row.to_dict()
+            row_dict: dict[str, Any] = {str(k): v for k, v in row.to_dict().items()}
             if self.filter_condition(row_dict):
                 records.append(row_dict)
 

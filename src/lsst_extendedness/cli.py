@@ -214,22 +214,22 @@ def ingest(
     storage.initialize()
 
     # Create source
-    if source == "mock":
-        from lsst_extendedness.sources import MockSource
+    from lsst_extendedness.sources import FileSource, KafkaSource, MockSource
+    from lsst_extendedness.sources.protocol import AlertSource
 
+    alert_source: AlertSource
+
+    if source == "mock":
         alert_source = MockSource(count=count)
         console.print(f"Generating {count} mock alerts")
     elif source == "file":
         if path is None:
             console.print("[red]Error:[/red] --path required for file source")
             return
-        from lsst_extendedness.sources import FileSource
 
         alert_source = FileSource(path)
         console.print(f"Reading from: {path}")
     else:
-        from lsst_extendedness.sources import KafkaSource
-
         kafka_topic = topic or settings.kafka.topic
         alert_source = KafkaSource(
             settings.kafka.to_consumer_config(),
@@ -369,7 +369,7 @@ def process(
                 save_result=save_results,
             )
 
-        if result.success:
+        if result.success and result.result is not None:
             console.print(f"[green]✓[/green] {result.result.summary}")
             console.print(f"  Records: {len(result.result.records)}")
             console.print(f"  Duration: {result.elapsed_seconds:.2f}s")
@@ -388,12 +388,12 @@ def process(
         console.print("[bold]Processing Results[/bold]")
 
         for result in batch_result.results:
-            if result.success:
+            if result.success and result.result is not None:
                 console.print(
-                    f"  [green]✓[/green] {result.processor_name}: " f"{result.result.summary}"
+                    f"  [green]✓[/green] {result.processor_name}: {result.result.summary}"
                 )
             else:
-                console.print(f"  [red]✗[/red] {result.processor_name}: " f"{result.error_message}")
+                console.print(f"  [red]✗[/red] {result.processor_name}: {result.error_message}")
 
         console.print()
         console.print(
@@ -505,9 +505,15 @@ def query(
 
     # Export or display
     if export:
-        from lsst_extendedness.query.export import export_dataframe
+        from lsst_extendedness.query.export import ExportFormat, export_dataframe
 
-        fmt = export.suffix.lstrip(".") or "csv"
+        fmt_str = export.suffix.lstrip(".") or "csv"
+        # Validate format
+        if fmt_str not in ("csv", "parquet", "json", "excel"):
+            console.print(f"[red]Unsupported format:[/red] {fmt_str}")
+            storage.close()
+            return
+        fmt: ExportFormat = fmt_str  # type: ignore[assignment]
         export_dataframe(df, export, format=fmt)
         console.print(f"[green]Exported to:[/green] {export}")
     else:
@@ -576,9 +582,15 @@ def export_cmd(
 
     storage = SQLiteStorage(db_path)
 
-    from lsst_extendedness.query.export import DataExporter
+    from lsst_extendedness.query.export import DataExporter, ExportFormat
 
-    exporter = DataExporter(storage, output_dir, default_format=fmt)
+    # Validate format
+    if fmt not in ("csv", "parquet", "json", "excel"):
+        console.print(f"[red]Unsupported format:[/red] {fmt}")
+        storage.close()
+        return
+    export_fmt: ExportFormat = fmt  # type: ignore[assignment]
+    exporter = DataExporter(storage, output_dir, default_format=export_fmt)
 
     console.print(f"[bold]Exporting {export_type}...[/bold]")
 

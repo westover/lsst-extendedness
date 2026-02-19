@@ -170,7 +170,7 @@ class FileSource:
             import fastavro
         except ImportError as e:
             raise ImportError(
-                "fastavro is required for AVRO files. " "Install with: pdm install"
+                "fastavro is required for AVRO files. Install with: pdm install"
             ) from e
 
         count = current_count
@@ -183,6 +183,8 @@ class FileSource:
                     break
 
                 try:
+                    if not isinstance(record, dict):
+                        continue
                     alert = AlertRecord.from_avro(record)
                     count += 1
                     yield alert
@@ -246,7 +248,7 @@ class FileSource:
         for _, row in df.iterrows():
             try:
                 # Convert row to dict, handling NaN values
-                row_dict = row.dropna().to_dict()
+                row_dict = {str(k): v for k, v in row.dropna().to_dict().items()}
 
                 # Ensure required fields exist
                 if "alert_id" not in row_dict:

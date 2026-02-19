@@ -118,3 +118,4 @@ site/
 .env.local
 .env.*.local
 secrets/
+uv.lock

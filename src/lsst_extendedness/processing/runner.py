@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
@@ -96,7 +96,7 @@ class ProcessingRunner:
         *,
         window_days: int = 15,
         save_result: bool = True,
-        **extra_params,
+        **extra_params: Any,
     ) -> RunResult:
         """Run a single processor.
 
@@ -228,7 +228,7 @@ class ProcessingRunner:
         self,
         processor_name: str,
         limit: int = 10,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Get recent processing results for a processor.
 
         Args:

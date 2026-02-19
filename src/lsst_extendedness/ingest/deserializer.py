@@ -34,8 +34,7 @@ def deserialize_avro(data: bytes, schema: dict[str, Any] | None = None) -> dict[
         import fastavro
     except ImportError as e:
         raise ImportError(
-            "fastavro is required for AVRO deserialization. "
-            "Install with: pdm add fastavro"
+            "fastavro is required for AVRO deserialization. Install with: pdm add fastavro"
         ) from e
 
     # Check for Confluent Wire Format (magic byte 0x00)
@@ -50,7 +49,7 @@ def deserialize_avro(data: bytes, schema: dict[str, Any] | None = None) -> dict[
     if schema:
         # Use provided schema
         parsed_schema = fastavro.parse_schema(schema)
-        record = fastavro.schemaless_reader(reader, parsed_schema)
+        record = fastavro.schemaless_reader(reader, parsed_schema, parsed_schema)
     else:
         # Schema embedded in data (standard AVRO container)
         records = list(fastavro.reader(reader))
@@ -58,6 +57,8 @@ def deserialize_avro(data: bytes, schema: dict[str, Any] | None = None) -> dict[
             raise ValueError("No records found in AVRO data")
         record = records[0]
 
+    if not isinstance(record, dict):
+        raise ValueError(f"Expected dict from AVRO deserialization, got {type(record)}")
     return record
 
 
@@ -72,7 +73,8 @@ def extract_schema_id(data: bytes) -> int | None:
     """
     if len(data) > 5 and data[0] == 0:
         # Unpack 4-byte big-endian schema ID
-        return struct.unpack(">I", data[1:5])[0]
+        schema_id: int = struct.unpack(">I", data[1:5])[0]
+        return schema_id
     return None
 
 
@@ -143,14 +145,13 @@ class AlertDeserializer:
         try:
             import httpx
 
-            response = httpx.get(
-                f"{self.schema_registry_url}/schemas/ids/{schema_id}"
-            )
+            response = httpx.get(f"{self.schema_registry_url}/schemas/ids/{schema_id}")
             if response.status_code == 200:
                 schema = response.json().get("schema")
                 if schema:
                     import json
-                    parsed = json.loads(schema)
+
+                    parsed: dict[str, Any] = json.loads(schema)
                     self._schema_cache[schema_id] = parsed
                     return parsed
         except Exception:

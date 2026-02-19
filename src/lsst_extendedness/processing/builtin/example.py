@@ -175,7 +175,7 @@ class SourceSummaryProcessor(AggregatingProcessor):
         if len(group_df) < 2:
             return None
 
-        summary = {
+        summary: dict[str, Any] = {
             "detection_count": len(group_df),
             "first_mjd": float(group_df["mjd"].min()),
             "last_mjd": float(group_df["mjd"].max()),
@@ -192,7 +192,7 @@ class SourceSummaryProcessor(AggregatingProcessor):
 
         # Filter coverage
         if "filter_name" in group_df.columns:
-            summary["filters"] = list(group_df["filter_name"].dropna().unique())
+            summary["filters"] = [str(f) for f in group_df["filter_name"].dropna().unique()]
 
         # SSO status
         if "has_ss_source" in group_df.columns:
@@ -242,10 +242,15 @@ class ReassociationTracker(BaseProcessor):
             )
 
         # Group by source
-        records = []
+        records: list[dict[str, Any]] = []
         for source_id, group in df.groupby("dia_source_id"):
-            record = {
-                "dia_source_id": int(source_id),
+            # Convert source_id to int safely
+            if hasattr(source_id, "__index__"):
+                source_id_int = int(source_id)
+            else:
+                source_id_int = int(str(source_id))
+            record: dict[str, Any] = {
+                "dia_source_id": source_id_int,
                 "reassociation_count": len(group),
                 "first_reassoc_mjd": float(group["mjd"].min()),
                 "last_reassoc_mjd": float(group["mjd"].max()),
@@ -253,13 +258,13 @@ class ReassociationTracker(BaseProcessor):
 
             # Track SSObject changes
             if "ss_object_id" in group.columns:
-                ss_objects = group["ss_object_id"].dropna().unique().tolist()
+                ss_objects = [str(s) for s in group["ss_object_id"].dropna().unique()]
                 record["ss_objects"] = ss_objects
                 record["ss_object_count"] = len(ss_objects)
 
             # Track reasons
             if "reassociation_reason" in group.columns:
-                reasons = group["reassociation_reason"].dropna().unique().tolist()
+                reasons = [str(r) for r in group["reassociation_reason"].dropna().unique()]
                 record["reasons"] = reasons
 
             records.append(record)

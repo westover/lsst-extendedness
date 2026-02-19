@@ -3,8 +3,9 @@ Kafka helper utilities for LSST alert consumer
 """
 
 import logging
-from confluent_kafka import Consumer, KafkaError
-from confluent_kafka.admin import AdminClient, NewTopic
+
+from confluent_kafka import Consumer
+from confluent_kafka.admin import AdminClient
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ def test_connection(config):
         admin_client = AdminClient({
             'bootstrap.servers': config['bootstrap.servers']
         })
-        
+
         metadata = admin_client.list_topics(timeout=10)
         logger.info(f"Connected to Kafka cluster: {metadata.cluster_id}")
         return True
@@ -77,11 +78,11 @@ def list_topics(config):
         admin_client = AdminClient({
             'bootstrap.servers': config['bootstrap.servers']
         })
-        
+
         metadata = admin_client.list_topics(timeout=10)
-        topics = [topic for topic in metadata.topics.keys() 
+        topics = [topic for topic in metadata.topics.keys()
                  if not topic.startswith('_')]  # Exclude internal topics
-        
+
         return sorted(topics)
     except Exception as e:
         logger.error(f"Failed to list topics: {e}")
@@ -108,21 +109,21 @@ def get_topic_info(config, topic_name):
         admin_client = AdminClient({
             'bootstrap.servers': config['bootstrap.servers']
         })
-        
+
         metadata = admin_client.list_topics(timeout=10)
-        
+
         if topic_name not in metadata.topics:
             logger.warning(f"Topic '{topic_name}' not found")
             return None
-        
+
         topic_metadata = metadata.topics[topic_name]
-        
+
         info = {
             'name': topic_name,
             'partitions': len(topic_metadata.partitions),
             'partition_details': []
         }
-        
+
         for partition_id, partition_metadata in topic_metadata.partitions.items():
             info['partition_details'].append({
                 'id': partition_id,
@@ -130,7 +131,7 @@ def get_topic_info(config, topic_name):
                 'replicas': partition_metadata.replicas,
                 'isrs': partition_metadata.isrs
             })
-        
+
         return info
     except Exception as e:
         logger.error(f"Failed to get topic info: {e}")
@@ -156,36 +157,35 @@ def get_consumer_lag(consumer, topic, partitions=None):
         Consumer lag per partition
     """
     try:
-        from confluent_kafka import TopicPartition
-        
+
         # Get current assignment
         assignment = consumer.assignment()
-        
+
         if not assignment:
             logger.warning("Consumer has no partition assignment")
             return {}
-        
+
         lag_info = {}
-        
+
         for tp in assignment:
             if topic and tp.topic != topic:
                 continue
-            
+
             # Get committed offset
             committed = consumer.committed([tp])[0]
             committed_offset = committed.offset if committed else -1
-            
+
             # Get high water mark
             low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
-            
+
             lag = high - committed_offset if committed_offset >= 0 else high
-            
+
             lag_info[tp.partition] = {
                 'committed_offset': committed_offset,
                 'high_water_mark': high,
                 'lag': lag
             }
-        
+
         return lag_info
     except Exception as e:
         logger.error(f"Failed to get consumer lag: {e}")
@@ -205,23 +205,23 @@ def seek_to_beginning(consumer, topic):
     """
     try:
         from confluent_kafka import TopicPartition
-        
+
         # Get topic partitions
         metadata = consumer.list_topics(topic, timeout=10)
-        
+
         if topic not in metadata.topics:
             logger.error(f"Topic '{topic}' not found")
             return
-        
+
         partitions = metadata.topics[topic].partitions
-        
+
         # Create TopicPartition objects for seeking
-        tps = [TopicPartition(topic, partition_id, 0) 
+        tps = [TopicPartition(topic, partition_id, 0)
                for partition_id in partitions.keys()]
-        
+
         # Seek to beginning
         consumer.seek(tps[0])  # Seek first partition as example
-        
+
         logger.info(f"Seeking to beginning of topic '{topic}'")
     except Exception as e:
         logger.error(f"Failed to seek to beginning: {e}")
@@ -245,32 +245,32 @@ def get_message_count_estimate(config, topic):
     """
     try:
         from confluent_kafka import TopicPartition
-        
+
         consumer = Consumer({
             **config,
             'group.id': 'temp-counter',
             'enable.auto.commit': False
         })
-        
+
         # Get topic metadata
         metadata = consumer.list_topics(topic, timeout=10)
-        
+
         if topic not in metadata.topics:
             logger.error(f"Topic '{topic}' not found")
             consumer.close()
             return 0
-        
+
         partitions = metadata.topics[topic].partitions
-        
+
         total_messages = 0
-        
+
         for partition_id in partitions.keys():
             tp = TopicPartition(topic, partition_id)
             low, high = consumer.get_watermark_offsets(tp, timeout=5.0)
             total_messages += (high - low)
-        
+
         consumer.close()
-        
+
         return total_messages
     except Exception as e:
         logger.error(f"Failed to estimate message count: {e}")

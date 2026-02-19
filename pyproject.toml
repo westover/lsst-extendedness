@@ -174,8 +174,13 @@ select = [
 ignore = [
     "E501",   # Line too long (handled by formatter)
     "B008",   # Do not perform function calls in argument defaults
+    "B027",   # Empty method in abstract base class (intentional for optional hooks)
     "C901",   # Too complex
     "ARG001", # Unused function argument (common in protocols)
+    "SIM103", # Return condition directly (less readable)
+    "SIM108", # Use ternary operator (less readable in many cases)
+    "PTH123", # open() vs Path.open() (both are fine)
+    "UP042",  # Prefer StrEnum (requires Python 3.11+)
     "TCH001", # Move application import into type-checking block (too aggressive)
     "TCH002", # Move third-party import into type-checking block (too aggressive)
     "TCH003", # Move stdlib import into type-checking block (too aggressive)
@@ -187,6 +192,12 @@ known-first-party = ["lsst_extendedness"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
     "ARG001",  # Unused arguments in tests (fixtures)
+    "ARG002",  # Unused method arguments in tests (mock classes)
+    "B007",    # Unused loop variable (setup loops)
+    "B905",    # zip without strict= (not needed in tests)
+    "F401",    # Unused imports (optional dependency checks)
+    "F841",    # Unused variables (test setup)
+    "RUF059",  # Unused unpacked variables (common in tests)
     "S101",    # Use of assert
 ]
 
@@ -195,6 +206,8 @@ known-first-party = ["lsst_extendedness"]
 # ============================================================================
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
 strict = true
 warn_return_any = true
 warn_unused_ignores = true

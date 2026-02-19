@@ -142,11 +142,13 @@ class MockSource:
         is_reassociation = has_sso and rng.random() < self.reassociation_probability
         reassoc_reason = None
         if is_reassociation:
-            reassoc_reason = rng.choice([
-                "new_association",
-                "changed_association",
-                "updated_reassociation",
-            ])
+            reassoc_reason = rng.choice(
+                [
+                    "new_association",
+                    "changed_association",
+                    "updated_reassociation",
+                ]
+            )
 
         # Generate photometry
         ps_flux = rng.gauss(1000, 500)

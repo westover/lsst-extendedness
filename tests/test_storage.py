@@ -8,7 +8,6 @@ Tests the SQLiteStorage implementation for:
 - State tracking
 """
 
-
 from lsst_extendedness.models import IngestionRun, ProcessingResult
 from lsst_extendedness.storage import SQLiteStorage
 

@@ -11,13 +11,12 @@ import io
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+import numpy as np
 import structlog
 
 if TYPE_CHECKING:
-    import numpy as np
-
     from ..models.alerts import AlertRecord
 
 logger = structlog.get_logger(__name__)
@@ -338,7 +337,7 @@ def load_cutout_as_array(path: Path | str) -> np.ndarray:
         with gzip.open(path, "rb") as f:
             data = f.read()
         with fits.open(io.BytesIO(data)) as hdul:
-            return hdul[0].data
+            return cast("np.ndarray[tuple[Any, ...], np.dtype[Any]]", hdul[0].data)
     else:
         with fits.open(path) as hdul:
-            return hdul[0].data
+            return cast("np.ndarray[tuple[Any, ...], np.dtype[Any]]", hdul[0].data)

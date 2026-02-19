@@ -8,7 +8,7 @@ returning pandas DataFrames ready for analysis.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -36,7 +36,7 @@ def _get_storage(storage: SQLiteStorage | None = None) -> SQLiteStorage:
 def _query_to_df(
     storage: SQLiteStorage,
     query: str,
-    params: tuple = (),
+    params: tuple[Any, ...] = (),
 ) -> pd.DataFrame:
     """Execute query and return as DataFrame."""
     import pandas as pd
@@ -346,7 +346,7 @@ def processing_results(
         )
 
 
-def stats(storage: SQLiteStorage | None = None) -> dict:
+def stats(storage: SQLiteStorage | None = None) -> dict[str, Any]:
     """Get database statistics.
 
     Args:
@@ -361,7 +361,7 @@ def stats(storage: SQLiteStorage | None = None) -> dict:
 
 def custom(
     sql: str,
-    params: tuple = (),
+    params: tuple[Any, ...] = (),
     storage: SQLiteStorage | None = None,
 ) -> pd.DataFrame:
     """Execute custom SQL query.

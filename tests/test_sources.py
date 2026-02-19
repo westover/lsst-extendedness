@@ -7,7 +7,6 @@ Tests the source implementations:
 - Protocol compliance
 """
 
-
 import pandas as pd
 import pytest
 
@@ -359,7 +358,7 @@ class TestFileSource:
         """Test reading CSV with camelCase column names."""
         csv_file = tmp_path / "alerts.csv"
         csv_file.write_text(
-            "alertId,diaSourceId,ra,decl,midPointTai,filterName\n" "1,100,180.0,45.0,60000.0,g\n"
+            "alertId,diaSourceId,ra,decl,midPointTai,filterName\n1,100,180.0,45.0,60000.0,g\n"
         )
 
         source = FileSource(csv_file)

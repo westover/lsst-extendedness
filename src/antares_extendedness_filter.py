@@ -40,61 +40,61 @@ def extendedness_filter(locus):
     bool
         True if the alert passes the filter, False otherwise
     """
-    
+
     # Configuration - adjust these values for your science case
     EXTENDEDNESS_MEDIAN_MIN = 0.0  # Minimum median extendedness
     EXTENDEDNESS_MEDIAN_MAX = 1.0  # Maximum median extendedness
     EXTENDEDNESS_MIN_THRESHOLD = 0.0  # Minimum value threshold
     EXTENDEDNESS_MAX_THRESHOLD = 1.0  # Maximum value threshold
-    
+
     # SSSource requirement: True to require SSSource, False to exclude SSSource
     REQUIRE_SSSOURCE = True
-    
+
     # Reassociation detection window (days)
     # If ssObjectReassocTimeMjdTai is within this many days of the observation,
     # consider it a recent reassociation and pass the alert through
     REASSOC_WINDOW_DAYS = 1.0  # Default: 1 day
-    
+
     # Get the most recent alert
     if not locus.alerts:
         return False
-        
+
     latest_alert = locus.alerts[-1]
-    
+
     # Extract extendedness properties from the alert
     # These come from the DIASource table fields
     try:
         extendedness_median = latest_alert.properties.get('extendednessMedian')
         extendedness_min = latest_alert.properties.get('extendednessMin')
         extendedness_max = latest_alert.properties.get('extendednessMax')
-        
+
         # Check if all required fields are present
         if None in [extendedness_median, extendedness_min, extendedness_max]:
             return False
-            
+
         # Apply extendedness filter criteria
         passes_median = EXTENDEDNESS_MEDIAN_MIN <= extendedness_median <= EXTENDEDNESS_MEDIAN_MAX
         passes_min = extendedness_min >= EXTENDEDNESS_MIN_THRESHOLD
         passes_max = extendedness_max <= EXTENDEDNESS_MAX_THRESHOLD
-        
+
         passes_extendedness = passes_median and passes_min and passes_max
-        
+
         # Check for SSSource schema attachment
         # The SSSource data is typically in the alert packet's ssObject field
         # We're just checking if it exists, not validating its contents
         has_sssource = False
         ssobject_reassoc_time = None
-        
+
         # Method 1: Check via alert properties (if ANTARES exposes it this way)
         if hasattr(latest_alert, 'properties'):
             # Check for any SSSource-related fields
             sssource_fields = ['ssObjectId', 'ssObject']
-            has_sssource = any(latest_alert.properties.get(field) is not None 
+            has_sssource = any(latest_alert.properties.get(field) is not None
                              for field in sssource_fields)
-            
+
             # Get reassociation timestamp if available
             ssobject_reassoc_time = latest_alert.properties.get('ssObjectReassocTimeMjdTai')
-        
+
         # Method 2: Check via raw alert packet (if available)
         if not has_sssource and hasattr(latest_alert, 'packet'):
             # The ssObject field in LSST alert packets indicates SSSource attachment
@@ -102,24 +102,24 @@ def extendedness_filter(locus):
                 has_sssource = True
                 if ssobject_reassoc_time is None:
                     ssobject_reassoc_time = latest_alert.packet['ssObject'].get('ssObjectReassocTimeMjdTai')
-        
+
         # Method 3: Check via locus tags (ANTARES may tag SSO associations)
         if not has_sssource and hasattr(locus, 'tags'):
             # Check for solar system object tags
             sso_tags = ['solar_system', 'sso', 'asteroid', 'comet']
             has_sssource = any(tag in locus.tags for tag in sso_tags)
-        
+
         # Check for recent reassociation
         is_recent_reassoc = False
         if has_sssource and ssobject_reassoc_time is not None:
             # Get observation time
             obs_time = latest_alert.properties.get('midPointTai')
-            
+
             if obs_time is not None:
                 # Check if reassociation is recent (within window of observation)
                 time_diff = abs(ssobject_reassoc_time - obs_time)
                 is_recent_reassoc = time_diff <= REASSOC_WINDOW_DAYS
-        
+
         # Apply SSSource filter with reassociation logic
         if REQUIRE_SSSOURCE:
             # Pass if:
@@ -129,13 +129,13 @@ def extendedness_filter(locus):
         else:
             # Exclude SSSource objects
             passes_sssource = not has_sssource and passes_extendedness
-        
+
         # Return True if criteria are met
         # For REQUIRE_SSSOURCE=True: pass if has SSSource AND (good extendedness OR recent reassoc)
         # For REQUIRE_SSSOURCE=False: pass if no SSSource AND good extendedness
         return passes_sssource
-        
-    except (AttributeError, KeyError) as e:
+
+    except (AttributeError, KeyError):
         # Log the error if needed (ANTARES provides logging)
         return False
 

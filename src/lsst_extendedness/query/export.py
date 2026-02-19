@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import structlog
 
@@ -26,9 +26,9 @@ def export_query(
     storage: SQLiteStorage,
     query: str,
     output_path: Path | str,
-    params: tuple = (),
+    params: tuple[Any, ...] = (),
     format: ExportFormat = "csv",
-    **kwargs,
+    **kwargs: Any,
 ) -> Path:
     """Export query results to file.
 
@@ -56,7 +56,7 @@ def export_dataframe(
     df: pd.DataFrame,
     output_path: Path | str,
     format: ExportFormat = "csv",
-    **kwargs,
+    **kwargs: Any,
 ) -> Path:
     """Export DataFrame to file.
 
@@ -204,7 +204,7 @@ def export_processing_results(
     if processor_name:
         filename = f"results_{processor_name}_{date_str}.{format}"
         query = "SELECT * FROM processing_results WHERE processor_name = ?"
-        params = (processor_name,)
+        params: tuple[Any, ...] = (processor_name,)
     else:
         filename = f"results_all_{date_str}.{format}"
         query = "SELECT * FROM processing_results"
@@ -338,7 +338,7 @@ class DataExporter:
         self,
         query: str,
         filename: str,
-        params: tuple = (),
+        params: tuple[Any, ...] = (),
         format: ExportFormat | None = None,
     ) -> Path:
         """Export custom query."""
