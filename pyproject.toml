@@ -242,10 +242,16 @@ module = "lsst_extendedness.cli"
 disallow_untyped_decorators = false  # Click decorators are untyped
 
 [[tool.mypy.overrides]]
+module = "lsst_extendedness.models.runs"
+warn_unused_ignores = false  # Pydantic computed_field needs type: ignore in some mypy versions
+
+[[tool.mypy.overrides]]
 module = [
     "lsst_alert_consumer",
     "lsst_alert_consumer.*",
     "utils.*",
+    "antares_extendedness_filter",
+    "__init__",
 ]
 ignore_errors = true  # Legacy code being replaced
 
