@@ -39,6 +39,12 @@ dependencies = [
     # Astronomy
     "astropy>=6.0.0",
 
+    # ANTARES broker (primary alert source)
+    # bson-modern is a Python 3.12+ compatible fork of bson
+    # (required by antares-client, original bson only supports Python 3.6)
+    "bson-modern>=1.0.0",
+    "antares-client>=1.3.0",
+
     # Database (SQLite is built-in, this is for type hints)
 
     # HTTP (for schema registry, etc.)
@@ -76,11 +82,6 @@ dev = [
     "mkdocstrings[python]>=0.24.0",
 ]
 
-antares = [
-    # ANTARES client for broker integration
-    "antares-client>=1.3.0",
-]
-
 thumbnails = [
     # For creating PNG thumbnails from FITS cutouts
     "pillow>=10.1.0",
@@ -104,6 +105,11 @@ build-backend = "pdm.backend"
 
 [tool.pdm]
 distribution = true
+
+# Note: antares-client depends on bson which only supports Python 3.6
+# We exclude it and use bson-modern which provides the same module name
+[tool.pdm.resolution]
+excludes = ["bson"]
 
 [tool.pdm.dev-dependencies]
 dev = [
