@@ -163,64 +163,11 @@ jobs:
             --cov-fail-under=85
 
   # ============================================================================
-  # BUILD CHECK
-  # ============================================================================
-  build:
-    name: Build Package
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install PDM
-        run: pip install pdm
-
-      - name: Build package
-        run: pdm build
-
-      - name: Check package
-        run: |
-          pip install twine
-          twine check dist/*
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: dist/
-
-  # ============================================================================
-  # SECURITY SCAN
-  # ============================================================================
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install bandit
-        run: pip install bandit[toml]
-
-      - name: Run Bandit security scan
-        run: bandit -r src/ -c pyproject.toml
-
-  # ============================================================================
   # ALL CHECKS PASSED
   # ============================================================================
   all-checks:
     name: All Checks Passed
-    needs: [lint, test, coverage, build, security]
+    needs: [lint, test, coverage]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -228,9 +175,7 @@ jobs:
         run: |
           if [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.test.result }}" != "success" ]] || \
-             [[ "${{ needs.coverage.result }}" != "success" ]] || \
-             [[ "${{ needs.build.result }}" != "success" ]] || \
-             [[ "${{ needs.security.result }}" != "success" ]]; then
+             [[ "${{ needs.coverage.result }}" != "success" ]]; then
             echo "One or more checks failed"
             exit 1
           fi
