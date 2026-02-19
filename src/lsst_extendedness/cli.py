@@ -188,6 +188,11 @@ def db_shell(ctx: click.Context) -> None:
     type=int,
     help="Maximum runtime in seconds",
 )
+@click.option(
+    "--legacy",
+    is_flag=True,
+    help="Use legacy CSV-based consumer (lsst_alert_consumer.py)",
+)
 @click.pass_context
 def ingest(
     ctx: click.Context,
@@ -197,13 +202,51 @@ def ingest(
     count: int,
     max_messages: int | None,
     duration: int | None,
+    legacy: bool,
 ) -> None:
     """Run the ingestion pipeline.
 
     Consumes alerts from the specified source and writes to the database.
+
+    Use --legacy to run the original CSV-based consumer instead.
     """
     settings = ctx.obj["settings"]
     logger = get_logger(__name__)
+
+    # Legacy mode: use original CSV-based consumer
+    if legacy:
+        console.print("[bold]LSST Extendedness Pipeline - Legacy Mode[/bold]")
+        console.print("[yellow]Using original CSV-based consumer[/yellow]")
+
+        # Import and run the legacy consumer
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+        try:
+            from lsst_alert_consumer import LSSTAlertConsumer
+
+            kafka_config = settings.kafka.to_consumer_config()
+            kafka_topic = topic or settings.kafka.topic
+
+            consumer = LSSTAlertConsumer(
+                kafka_config=kafka_config,
+                topic=kafka_topic,
+                data_dir=settings.data_dir,
+            )
+
+            console.print(f"Topic: [cyan]{kafka_topic}[/cyan]")
+            console.print("Starting legacy consumer (Ctrl+C to stop)...")
+
+            consumer.consume_alerts(
+                max_messages=max_messages,
+                max_duration_seconds=duration,
+            )
+
+            console.print("[green]Legacy ingestion complete[/green]")
+        except ImportError as e:
+            console.print(f"[red]Error:[/red] Could not import legacy consumer: {e}")
+            console.print("Make sure lsst_alert_consumer.py is in the src/ directory")
+        return
 
     console.print("[bold]LSST Extendedness Pipeline - Ingestion[/bold]")
     console.print(f"Source: [cyan]{source}[/cyan]")
@@ -285,6 +328,128 @@ def ingest(
     if run.duration_seconds:
         rate = run.alerts_ingested / run.duration_seconds if run.duration_seconds > 0 else 0
         console.print(f"  Duration: {run.duration_seconds:.1f}s ({rate:.0f} alerts/sec)")
+
+
+@main.command("backfill")
+@click.argument("path", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--format",
+    "file_format",
+    type=click.Choice(["auto", "csv", "avro"]),
+    default="auto",
+    help="File format (auto-detect by default)",
+)
+@click.option(
+    "--limit",
+    type=int,
+    help="Maximum records to import",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be imported without writing",
+)
+@click.pass_context
+def backfill(
+    ctx: click.Context,
+    path: Path,
+    file_format: str,
+    limit: int | None,
+    dry_run: bool,
+) -> None:
+    """Import historical data from CSV or AVRO files.
+
+    PATH can be a single file, directory, or glob pattern.
+
+    Examples:
+
+        # Import from legacy CSV files
+        lsst-extendedness backfill data/processed/csv/
+
+        # Import specific AVRO dump
+        lsst-extendedness backfill dumps/alerts_20240101.avro
+
+        # Dry run to see what would be imported
+        lsst-extendedness backfill data/*.csv --dry-run
+    """
+    settings = ctx.obj["settings"]
+
+    console.print("[bold]LSST Extendedness Pipeline - Backfill[/bold]")
+    console.print(f"Path: [cyan]{path}[/cyan]")
+
+    # Create file source
+    from lsst_extendedness.sources import FileSource
+
+    file_type = None if file_format == "auto" else file_format
+    source = FileSource(path, file_type=file_type)
+    source.connect()
+
+    if not source._files:
+        console.print("[yellow]No matching files found[/yellow]")
+        return
+
+    console.print(f"Found [green]{len(source._files)}[/green] file(s)")
+    for f in source._files[:5]:
+        console.print(f"  • {f.name}")
+    if len(source._files) > 5:
+        console.print(f"  ... and {len(source._files) - 5} more")
+
+    if dry_run:
+        console.print()
+        console.print("[yellow]Dry run - counting records...[/yellow]")
+        count = 0
+        for _ in source.fetch_alerts(limit=limit):
+            count += 1
+        console.print(f"Would import [green]{count:,}[/green] alerts")
+        return
+
+    # Initialize storage
+    db_path = settings.database_path
+    storage = SQLiteStorage(db_path)
+    storage.initialize()
+
+    from lsst_extendedness.models import IngestionRun
+
+    run = IngestionRun(source_name=f"backfill:{path.name}")
+    storage.write_ingestion_run(run)
+
+    batch = []
+    batch_size = settings.ingestion.batch_size
+
+    try:
+        with console.status("[bold green]Importing alerts...") as status:
+            for alert in source.fetch_alerts(limit=limit):
+                batch.append(alert)
+                run.alerts_ingested += 1
+
+                if len(batch) >= batch_size:
+                    storage.write_batch(batch)
+                    status.update(f"Imported {run.alerts_ingested:,} alerts")
+                    batch = []
+
+            # Write remaining
+            if batch:
+                storage.write_batch(batch)
+
+        run.complete()
+        storage.update_ingestion_run(run)
+
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted[/yellow]")
+        run.fail("User interrupted")
+        storage.update_ingestion_run(run)
+    except Exception as e:
+        console.print(f"\n[red]Error:[/red] {e}")
+        run.fail(str(e))
+        storage.update_ingestion_run(run)
+    finally:
+        source.close()
+        storage.close()
+
+    console.print()
+    console.print("[bold]Backfill Complete[/bold]")
+    console.print(f"  Alerts imported: [green]{run.alerts_ingested:,}[/green]")
+    console.print(f"  Status: [{'green' if run.is_complete else 'red'}]{run.status.value}[/]")
 
 
 @main.command("process")
