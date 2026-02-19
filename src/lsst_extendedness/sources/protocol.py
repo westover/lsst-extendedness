@@ -33,8 +33,8 @@ Using registered sources:
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from lsst_extendedness.models import AlertRecord
@@ -103,7 +103,7 @@ class AlertSource(Protocol):
         """
         ...
 
-    def fetch_alerts(self, limit: int | None = None) -> Iterator["AlertRecord"]:
+    def fetch_alerts(self, limit: int | None = None) -> Iterator[AlertRecord]:
         """Yield alert records from the source.
 
         This is the main data retrieval method. It should:
@@ -136,7 +136,7 @@ class AlertSource(Protocol):
         ...
 
 
-def register_source(name: str):
+def register_source(name: str) -> Callable[[type], type]:
     """Decorator to register a source implementation.
 
     Use this decorator to make a source class discoverable
@@ -164,7 +164,7 @@ def register_source(name: str):
     return decorator
 
 
-def get_source(name: str, *args, **kwargs) -> AlertSource:
+def get_source(name: str, *args: Any, **kwargs: Any) -> AlertSource:
     """Get a registered source by name.
 
     Args:
@@ -187,7 +187,8 @@ def get_source(name: str, *args, **kwargs) -> AlertSource:
         raise KeyError(f"Source '{name}' not found. Available: {available}")
 
     source_class = _SOURCE_REGISTRY[name]
-    return source_class(*args, **kwargs)
+    instance = source_class(*args, **kwargs)
+    return instance  # type: ignore
 
 
 def list_sources() -> list[str]:

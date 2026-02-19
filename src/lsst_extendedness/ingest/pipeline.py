@@ -8,21 +8,18 @@ handling batching, state tracking, and error recovery.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
 
 import structlog
 
 from ..models.alerts import AlertRecord
-from ..models.runs import IngestionRun, RunStatus
+from ..models.runs import IngestionRun
 from ..sources.protocol import AlertSource
 from ..storage.sqlite import SQLiteStorage
 from .state import StateTracker
-
-if TYPE_CHECKING:
-    from ..config.settings import PipelineConfig
 
 logger = structlog.get_logger(__name__)
 
@@ -105,7 +102,12 @@ class IngestionPipeline:
         self.source.connect()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         """Context manager exit: close source."""
         self.source.close()
 
@@ -159,10 +161,7 @@ class IngestionPipeline:
                     batch = []
 
                 # Check max alerts limit
-                if (
-                    self.options.max_alerts
-                    and stats.alerts_received >= self.options.max_alerts
-                ):
+                if self.options.max_alerts and stats.alerts_received >= self.options.max_alerts:
                     break
 
             # Write remaining alerts
@@ -245,8 +244,10 @@ class IngestionPipeline:
                     self.state_tracker.update_source_state(
                         dia_source_id=alert.dia_source_id,
                         mjd=alert.mjd,
-                        alert_id=alert.alert_id,
-                        has_ss_source=alert.has_ss_source,
+                        _alert_id=alert.alert_id,
+                        _has_ss_source=alert.has_ss_source,
+                        ss_object_id=alert.ss_object_id,
+                        reassoc_time=alert.ss_object_reassoc_time_mjd,
                     )
 
             logger.debug(
@@ -272,12 +273,12 @@ class IngestionPipeline:
         if not self._current_run:
             return
 
-        self._current_run.complete(
-            alerts_ingested=stats.alerts_stored,
-            alerts_failed=stats.alerts_failed,
-            new_sources=stats.new_sources,
-            reassociations=stats.reassociations,
-        )
+        # Update stats before completing
+        self._current_run.alerts_ingested = stats.alerts_stored
+        self._current_run.alerts_failed = stats.alerts_failed
+        self._current_run.new_sources = stats.new_sources
+        self._current_run.reassociations_detected = stats.reassociations
+        self._current_run.complete()
 
         if not self.options.dry_run:
             self.storage.write_ingestion_run(self._current_run)

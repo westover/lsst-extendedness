@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -23,10 +22,10 @@ class SourceState:
     dia_source_id: int
     first_seen_mjd: float
     last_seen_mjd: float
-    alert_count: int
-    last_alert_id: int
-    has_ss_source: bool
-    is_processed: bool
+    observation_count: int
+    ss_object_id: str | None = None
+    ss_object_reassoc_time: float | None = None
+    last_updated: str | None = None
 
 
 @dataclass
@@ -57,7 +56,8 @@ class StateTracker:
 
     def _ensure_state_tables(self) -> None:
         """Ensure Kafka state table exists."""
-        self.storage.execute("""
+        self.storage.execute(
+            """
             CREATE TABLE IF NOT EXISTS kafka_state (
                 topic TEXT NOT NULL,
                 partition INTEGER NOT NULL,
@@ -65,7 +65,8 @@ class StateTracker:
                 updated_at TEXT NOT NULL,
                 PRIMARY KEY (topic, partition)
             )
-        """)
+        """
+        )
 
     def get_source_state(self, dia_source_id: int) -> SourceState | None:
         """Get state of a previously processed source.
@@ -84,59 +85,36 @@ class StateTracker:
             dia_source_id=result["dia_source_id"],
             first_seen_mjd=result["first_seen_mjd"],
             last_seen_mjd=result["last_seen_mjd"],
-            alert_count=result["alert_count"],
-            last_alert_id=result["last_alert_id"],
-            has_ss_source=bool(result["has_ss_source"]),
-            is_processed=bool(result["is_processed"]),
+            observation_count=result.get("observation_count", 1),
+            ss_object_id=result.get("ss_object_id"),
+            ss_object_reassoc_time=result.get("ss_object_reassoc_time"),
+            last_updated=result.get("last_updated"),
         )
 
     def update_source_state(
         self,
         dia_source_id: int,
         mjd: float,
-        alert_id: int,
-        has_ss_source: bool = False,
+        _alert_id: int,
+        _has_ss_source: bool = False,
+        ss_object_id: str | None = None,
+        reassoc_time: float | None = None,
     ) -> None:
         """Update state for a source after processing an alert.
 
         Args:
             dia_source_id: DIA source identifier
             mjd: Modified Julian Date of the alert
-            alert_id: Alert identifier
-            has_ss_source: Whether alert has SSSource association
+            _alert_id: Alert identifier (reserved for future use)
+            _has_ss_source: Whether alert has SSSource association (reserved)
+            ss_object_id: SSObject ID if associated
+            reassoc_time: SSObject reassociation time if available
         """
         self.storage.update_processed_source(
             dia_source_id=dia_source_id,
-            mjd=mjd,
-            alert_id=alert_id,
-            has_ss_source=has_ss_source,
-        )
-
-    def is_source_processed(self, dia_source_id: int) -> bool:
-        """Check if a source has been fully processed.
-
-        Args:
-            dia_source_id: DIA source identifier
-
-        Returns:
-            True if source is marked as processed
-        """
-        state = self.get_source_state(dia_source_id)
-        return state.is_processed if state else False
-
-    def mark_source_processed(self, dia_source_id: int) -> None:
-        """Mark a source as fully processed.
-
-        Args:
-            dia_source_id: DIA source identifier
-        """
-        self.storage.execute(
-            """
-            UPDATE processed_sources
-            SET is_processed = 1, processed_at = ?
-            WHERE dia_source_id = ?
-            """,
-            (datetime.utcnow().isoformat(), dia_source_id),
+            last_seen_mjd=mjd,
+            ss_object_id=ss_object_id,
+            reassoc_time=reassoc_time,
         )
 
     def get_kafka_offset(self, topic: str, partition: int) -> int | None:
@@ -200,29 +178,7 @@ class StateTracker:
             for r in results
         ]
 
-    def get_unprocessed_sources(self, limit: int = 1000) -> list[int]:
-        """Get DIA source IDs that haven't been post-processed.
-
-        Args:
-            limit: Maximum number of IDs to return
-
-        Returns:
-            List of dia_source_id values
-        """
-        results = self.storage.query(
-            """
-            SELECT dia_source_id FROM processed_sources
-            WHERE is_processed = 0
-            ORDER BY last_seen_mjd DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
-        return [r["dia_source_id"] for r in results]
-
-    def get_sources_in_window(
-        self, start_mjd: float, end_mjd: float
-    ) -> list[SourceState]:
+    def get_sources_in_window(self, start_mjd: float, end_mjd: float) -> list[SourceState]:
         """Get all sources with alerts in a time window.
 
         Args:
@@ -245,24 +201,13 @@ class StateTracker:
                 dia_source_id=r["dia_source_id"],
                 first_seen_mjd=r["first_seen_mjd"],
                 last_seen_mjd=r["last_seen_mjd"],
-                alert_count=r["alert_count"],
-                last_alert_id=r["last_alert_id"],
-                has_ss_source=bool(r["has_ss_source"]),
-                is_processed=bool(r["is_processed"]),
+                observation_count=r.get("observation_count", 1),
+                ss_object_id=r.get("ss_object_id"),
+                ss_object_reassoc_time=r.get("ss_object_reassoc_time"),
+                last_updated=r.get("last_updated"),
             )
             for r in results
         ]
-
-    def reset_processing_flags(self) -> int:
-        """Reset all processing flags to allow reprocessing.
-
-        Returns:
-            Number of sources reset
-        """
-        cursor = self.storage.execute(
-            "UPDATE processed_sources SET is_processed = 0, processed_at = NULL"
-        )
-        return cursor.rowcount
 
     def cleanup_old_state(self, days: int = 90) -> int:
         """Remove state entries older than specified days.
@@ -276,8 +221,7 @@ class StateTracker:
         from ..utils.time import days_ago_mjd
 
         threshold_mjd = days_ago_mjd(days)
-        cursor = self.storage.execute(
+        return self.storage.execute(
             "DELETE FROM processed_sources WHERE last_seen_mjd < ?",
             (threshold_mjd,),
         )
-        return cursor.rowcount

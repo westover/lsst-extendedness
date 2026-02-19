@@ -176,6 +176,9 @@ ignore = [
     "B008",   # Do not perform function calls in argument defaults
     "C901",   # Too complex
     "ARG001", # Unused function argument (common in protocols)
+    "TCH001", # Move application import into type-checking block (too aggressive)
+    "TCH002", # Move third-party import into type-checking block (too aggressive)
+    "TCH003", # Move stdlib import into type-checking block (too aggressive)
 ]
 
 [tool.ruff.lint.isort]
@@ -218,6 +221,10 @@ ignore_missing_imports = true
 module = "tests.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "src.lsst_alert_consumer"
+ignore_errors = true  # Legacy code being replaced
 
 # ============================================================================
 # PYTEST CONFIGURATION

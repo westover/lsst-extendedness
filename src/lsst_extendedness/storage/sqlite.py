@@ -33,11 +33,8 @@ Example:
 
 from __future__ import annotations
 
-import json
-import shutil
 import sqlite3
 from collections.abc import Sequence
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -153,14 +150,30 @@ class SQLiteStorage:
 
         # Build INSERT statement with all columns
         columns = [
-            "alert_id", "dia_source_id", "dia_object_id",
-            "ra", "dec", "mjd", "ingested_at",
-            "filter_name", "ps_flux", "ps_flux_err", "snr",
-            "extendedness_median", "extendedness_min", "extendedness_max",
-            "has_ss_source", "ss_object_id", "ss_object_reassoc_time_mjd",
-            "is_reassociation", "reassociation_reason",
-            "trail_data", "pixel_flags",
-            "science_cutout_path", "template_cutout_path", "difference_cutout_path",
+            "alert_id",
+            "dia_source_id",
+            "dia_object_id",
+            "ra",
+            "dec",
+            "mjd",
+            "ingested_at",
+            "filter_name",
+            "ps_flux",
+            "ps_flux_err",
+            "snr",
+            "extendedness_median",
+            "extendedness_min",
+            "extendedness_max",
+            "has_ss_source",
+            "ss_object_id",
+            "ss_object_reassoc_time_mjd",
+            "is_reassociation",
+            "reassociation_reason",
+            "trail_data",
+            "pixel_flags",
+            "science_cutout_path",
+            "template_cutout_path",
+            "difference_cutout_path",
         ]
 
         placeholders = ", ".join(["?"] * len(columns))
@@ -319,7 +332,7 @@ class SQLiteStorage:
     def get_alert_count(self) -> int:
         """Get total number of alerts in storage."""
         result = self.query("SELECT COUNT(*) as count FROM alerts_raw")
-        return result[0]["count"] if result else 0
+        return int(result[0]["count"]) if result else 0
 
     def get_processed_source(self, dia_source_id: int) -> dict[str, Any] | None:
         """Get tracking info for a previously processed source.
@@ -405,15 +418,18 @@ class SQLiteStorage:
         stats: dict[str, Any] = {}
 
         # Table counts
-        for table in ["alerts_raw", "alerts_filtered", "processed_sources",
-                      "processing_results", "ingestion_runs"]:
+        for table in [
+            "alerts_raw",
+            "alerts_filtered",
+            "processed_sources",
+            "processing_results",
+            "ingestion_runs",
+        ]:
             result = self.query(f"SELECT COUNT(*) as count FROM {table}")
             stats[f"{table}_count"] = result[0]["count"] if result else 0
 
         # Date range
-        result = self.query(
-            "SELECT MIN(mjd) as min_mjd, MAX(mjd) as max_mjd FROM alerts_raw"
-        )
+        result = self.query("SELECT MIN(mjd) as min_mjd, MAX(mjd) as max_mjd FROM alerts_raw")
         if result and result[0]["min_mjd"]:
             stats["mjd_range"] = {
                 "min": result[0]["min_mjd"],
@@ -426,15 +442,11 @@ class SQLiteStorage:
             stats["file_size_mb"] = round(stats["file_size_bytes"] / (1024 * 1024), 2)
 
         # SSO statistics
-        result = self.query(
-            "SELECT COUNT(*) as count FROM alerts_raw WHERE has_ss_source = 1"
-        )
+        result = self.query("SELECT COUNT(*) as count FROM alerts_raw WHERE has_ss_source = 1")
         stats["sso_alerts"] = result[0]["count"] if result else 0
 
         # Reassociation statistics
-        result = self.query(
-            "SELECT COUNT(*) as count FROM alerts_raw WHERE is_reassociation = 1"
-        )
+        result = self.query("SELECT COUNT(*) as count FROM alerts_raw WHERE is_reassociation = 1")
         stats["reassociations"] = result[0]["count"] if result else 0
 
         return stats
@@ -464,7 +476,7 @@ class SQLiteStorage:
             self._connection.close()
             self._connection = None
 
-    def __enter__(self) -> "SQLiteStorage":
+    def __enter__(self) -> SQLiteStorage:
         """Context manager entry."""
         return self
 

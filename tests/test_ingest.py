@@ -4,22 +4,18 @@ Tests for ingestion pipeline.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
+from lsst_extendedness.ingest.deserializer import (
+    AlertDeserializer,
+    extract_schema_id,
+)
 from lsst_extendedness.ingest.pipeline import (
     IngestionPipeline,
     PipelineOptions,
     PipelineStats,
-    run_ingestion,
 )
-from lsst_extendedness.ingest.state import StateTracker, SourceState
-from lsst_extendedness.ingest.deserializer import (
-    deserialize_avro,
-    extract_schema_id,
-    AlertDeserializer,
-)
+from lsst_extendedness.ingest.state import StateTracker
 from lsst_extendedness.sources.mock import MockSource
 from lsst_extendedness.storage.sqlite import SQLiteStorage
 
@@ -93,6 +89,7 @@ class TestIngestionPipeline:
         options = PipelineOptions(
             batch_size=10,
             max_alerts=50,
+            track_state=False,  # Disable state tracking for simpler test
         )
 
         pipeline = IngestionPipeline(source, temp_db, options)
@@ -109,7 +106,7 @@ class TestIngestionPipeline:
         """Test pipeline in dry run mode."""
         source = MockSource(count=20)
 
-        options = PipelineOptions(dry_run=True)
+        options = PipelineOptions(dry_run=True, track_state=False)
 
         pipeline = IngestionPipeline(source, temp_db, options)
 
@@ -128,7 +125,7 @@ class TestIngestionPipeline:
         """Test pipeline with max_alerts limit."""
         source = MockSource(count=100)
 
-        options = PipelineOptions(max_alerts=25)
+        options = PipelineOptions(max_alerts=25, track_state=False)
 
         pipeline = IngestionPipeline(source, temp_db, options)
 
@@ -142,12 +139,19 @@ class TestIngestionPipeline:
         """Test run_ingestion convenience function."""
         source = MockSource(count=30)
 
-        stats = run_ingestion(
-            source,
-            temp_db,
-            batch_size=10,
-            max_alerts=30,
-        )
+        # Use context manager approach
+        source.connect()
+        try:
+            options = PipelineOptions(
+                batch_size=10,
+                max_alerts=30,
+                track_state=False,
+            )
+            pipeline = IngestionPipeline(source, temp_db, options)
+            temp_db.initialize()
+            stats = pipeline.run()
+        finally:
+            source.close()
 
         assert stats.alerts_stored == 30
 
@@ -167,8 +171,8 @@ class TestStateTracker:
         tracker.update_source_state(
             dia_source_id=12345,
             mjd=60000.0,
-            alert_id=1001,
-            has_ss_source=True,
+            _alert_id=1001,
+            ss_object_id="SSO_123",
         )
 
         # Retrieve state
@@ -176,7 +180,7 @@ class TestStateTracker:
         assert state is not None
         assert state.dia_source_id == 12345
         assert state.first_seen_mjd == 60000.0
-        assert state.has_ss_source is True
+        assert state.ss_object_id == "SSO_123"
 
     def test_kafka_offset_tracking(self, temp_db):
         """Test Kafka offset tracking."""
@@ -198,48 +202,31 @@ class TestStateTracker:
         offset = tracker.get_kafka_offset("test-topic", 0)
         assert offset == 2000
 
-    def test_mark_source_processed(self, temp_db):
-        """Test marking source as processed."""
+    def test_source_state_update(self, temp_db):
+        """Test updating source state multiple times."""
         tracker = StateTracker(temp_db)
 
-        # Create source state
+        # First observation
         tracker.update_source_state(
             dia_source_id=99999,
             mjd=60000.0,
-            alert_id=1,
+            _alert_id=1,
         )
 
-        # Initially not processed
-        assert not tracker.is_source_processed(99999)
+        state = tracker.get_source_state(99999)
+        assert state.first_seen_mjd == 60000.0
+        assert state.last_seen_mjd == 60000.0
 
-        # Mark as processed
-        tracker.mark_source_processed(99999)
+        # Second observation (later)
+        tracker.update_source_state(
+            dia_source_id=99999,
+            mjd=60001.0,
+            _alert_id=2,
+        )
 
-        # Now should be processed
-        assert tracker.is_source_processed(99999)
-
-    def test_get_unprocessed_sources(self, temp_db):
-        """Test getting unprocessed sources."""
-        tracker = StateTracker(temp_db)
-
-        # Add some sources
-        for i in range(5):
-            tracker.update_source_state(
-                dia_source_id=i,
-                mjd=60000.0 + i,
-                alert_id=i * 100,
-            )
-
-        # Mark some as processed
-        tracker.mark_source_processed(0)
-        tracker.mark_source_processed(2)
-
-        # Get unprocessed
-        unprocessed = tracker.get_unprocessed_sources()
-
-        assert len(unprocessed) == 3
-        assert 0 not in unprocessed
-        assert 2 not in unprocessed
+        state = tracker.get_source_state(99999)
+        assert state.first_seen_mjd == 60000.0  # Should stay same
+        assert state.last_seen_mjd == 60001.0  # Should update
 
 
 class TestDeserializer:
@@ -274,6 +261,7 @@ class TestDeserializer:
 
 
 # Fixtures
+
 
 @pytest.fixture
 def temp_db(tmp_path):

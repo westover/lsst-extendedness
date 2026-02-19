@@ -35,7 +35,7 @@ SCHEMA_VERSION = 1
 # TABLE DEFINITIONS
 # ============================================================================
 
-TABLES_SQL = """
+TABLES_SQL = f"""
 -- ============================================================================
 -- ALERTS_RAW: All ingested alerts (immutable, audit trail)
 -- ============================================================================
@@ -75,8 +75,8 @@ CREATE TABLE IF NOT EXISTS alerts_raw (
     reassociation_reason TEXT,
 
     -- Dynamic fields (JSON)
-    trail_data TEXT DEFAULT '{}',
-    pixel_flags TEXT DEFAULT '{}',
+    trail_data TEXT DEFAULT '{{}}',
+    pixel_flags TEXT DEFAULT '{{}}',
 
     -- Cutout paths
     science_cutout_path TEXT,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS alerts_filtered (
 
     -- Filter configuration (for reproducibility)
     filter_config_hash TEXT NOT NULL,
-    filter_config TEXT NOT NULL DEFAULT '{}',
+    filter_config TEXT NOT NULL DEFAULT '{{}}',
 
     -- When filtered
     filtered_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS processed_sources (
     last_updated TEXT NOT NULL DEFAULT (datetime('now')),
 
     -- Additional state (JSON)
-    metadata TEXT DEFAULT '{}'
+    metadata TEXT DEFAULT '{{}}'
 );
 
 -- ============================================================================
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS processing_results (
 
     -- Results (JSON)
     records TEXT NOT NULL DEFAULT '[]',
-    metadata TEXT NOT NULL DEFAULT '{}',
+    metadata TEXT NOT NULL DEFAULT '{{}}',
     summary TEXT,
 
     -- Timing
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 
     -- Source information
     source_name TEXT NOT NULL,
-    source_config TEXT DEFAULT '{}',
+    source_config TEXT DEFAULT '{{}}',
 
     -- Timing
     started_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
     error_message TEXT,
 
     -- Additional metadata
-    metadata TEXT DEFAULT '{}'
+    metadata TEXT DEFAULT '{{}}'
 );
 
 -- ============================================================================
@@ -196,9 +196,9 @@ CREATE TABLE IF NOT EXISTS schema_info (
 );
 
 -- Insert schema version
-INSERT OR REPLACE INTO schema_info (key, value) VALUES ('version', '{version}');
+INSERT OR REPLACE INTO schema_info (key, value) VALUES ('version', '{SCHEMA_VERSION}');
 INSERT OR REPLACE INTO schema_info (key, value) VALUES ('created_at', datetime('now'));
-""".format(version=SCHEMA_VERSION)
+"""
 
 # ============================================================================
 # INDEX DEFINITIONS
@@ -366,22 +366,24 @@ def get_schema_sql() -> str:
     Returns:
         Complete SQL schema as a string
     """
-    return "\n".join([
-        "-- LSST Extendedness Pipeline Schema",
-        f"-- Version: {SCHEMA_VERSION}",
-        "",
-        "-- TABLES",
-        TABLES_SQL,
-        "",
-        "-- INDEXES",
-        INDEXES_SQL,
-        "",
-        "-- VIEWS",
-        VIEWS_SQL,
-        "",
-        "-- TRIGGERS",
-        TRIGGERS_SQL,
-    ])
+    return "\n".join(
+        [
+            "-- LSST Extendedness Pipeline Schema",
+            f"-- Version: {SCHEMA_VERSION}",
+            "",
+            "-- TABLES",
+            TABLES_SQL,
+            "",
+            "-- INDEXES",
+            INDEXES_SQL,
+            "",
+            "-- VIEWS",
+            VIEWS_SQL,
+            "",
+            "-- TRIGGERS",
+            TRIGGERS_SQL,
+        ]
+    )
 
 
 def create_schema(conn: sqlite3.Connection, include_triggers: bool = True) -> None:
@@ -484,8 +486,5 @@ def _apply_migrations(conn: sqlite3.Connection, from_version: int) -> None:
     #     conn.execute("ALTER TABLE alerts_raw ADD COLUMN new_field TEXT")
 
     # Update version
-    conn.execute(
-        "UPDATE schema_info SET value = ? WHERE key = 'version'",
-        (str(SCHEMA_VERSION),)
-    )
+    conn.execute("UPDATE schema_info SET value = ? WHERE key = 'version'", (str(SCHEMA_VERSION),))
     conn.commit()

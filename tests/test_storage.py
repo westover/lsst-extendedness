@@ -8,9 +8,8 @@ Tests the SQLiteStorage implementation for:
 - State tracking
 """
 
-import pytest
 
-from lsst_extendedness.models import AlertRecord, ProcessingResult, IngestionRun
+from lsst_extendedness.models import IngestionRun, ProcessingResult
 from lsst_extendedness.storage import SQLiteStorage
 
 
@@ -84,10 +83,7 @@ class TestSQLiteStorageWrite:
         assert result_id > 0
 
         # Query to verify
-        rows = temp_db.query(
-            "SELECT * FROM processing_results WHERE id = ?",
-            (result_id,)
-        )
+        rows = temp_db.query("SELECT * FROM processing_results WHERE id = ?", (result_id,))
         assert len(rows) == 1
         assert rows[0]["processor_name"] == "test_processor"
 
@@ -102,10 +98,7 @@ class TestSQLiteStorageWrite:
         assert run.id == run_id
 
         # Query to verify
-        rows = temp_db.query(
-            "SELECT * FROM ingestion_runs WHERE id = ?",
-            (run_id,)
-        )
+        rows = temp_db.query("SELECT * FROM ingestion_runs WHERE id = ?", (run_id,))
         assert len(rows) == 1
         assert rows[0]["alerts_ingested"] == 50
 
@@ -126,10 +119,7 @@ class TestSQLiteStorageWrite:
         assert run.id == original_id
 
         # Query to verify update
-        rows = temp_db.query(
-            "SELECT * FROM ingestion_runs WHERE id = ?",
-            (run.id,)
-        )
+        rows = temp_db.query("SELECT * FROM ingestion_runs WHERE id = ?", (run.id,))
         assert rows[0]["alerts_ingested"] == 100
         assert rows[0]["status"] == "completed"
 
@@ -146,10 +136,7 @@ class TestSQLiteStorageQuery:
 
     def test_query_with_params(self, populated_db):
         """Test query with parameters."""
-        results = populated_db.query(
-            "SELECT * FROM alerts_raw WHERE has_ss_source = ?",
-            (1,)
-        )
+        results = populated_db.query("SELECT * FROM alerts_raw WHERE has_ss_source = ?", (1,))
 
         assert len(results) > 0
         for row in results:
@@ -167,9 +154,7 @@ class TestSQLiteStorageQuery:
         before = populated_db.get_alert_count()
 
         # Delete some alerts
-        affected = populated_db.execute(
-            "DELETE FROM alerts_raw WHERE has_ss_source = 0 LIMIT 5"
-        )
+        populated_db.execute("DELETE FROM alerts_raw WHERE has_ss_source = 0 LIMIT 5")
 
         # Should have deleted some
         after = populated_db.get_alert_count()
@@ -241,7 +226,7 @@ class TestSQLiteStorageStats:
         stats = populated_db.get_stats()
 
         assert stats["alerts_raw_count"] == 50
-        assert stats["file_size_mb"] > 0
+        assert stats["file_size_bytes"] > 0  # Use bytes for small test DBs
 
 
 class TestSQLiteStorageViews:
