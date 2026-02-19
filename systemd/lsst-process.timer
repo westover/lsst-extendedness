@@ -1,0 +1,15 @@
+[Unit]
+Description=LSST Extendedness Pipeline - Daily Post-Processing Timer
+Documentation=https://github.com/westover/lsst-extendedness
+
+[Timer]
+# Run daily at 4 AM local time (2 hours after ingestion)
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+# Accuracy
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

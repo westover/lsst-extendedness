@@ -1,0 +1,15 @@
+[Unit]
+Description=LSST Extendedness Pipeline - Daily Ingestion Timer
+Documentation=https://github.com/westover/lsst-extendedness
+
+[Timer]
+# Run daily at 2 AM local time
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+# Accuracy (how precisely to run at the scheduled time)
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,28 @@
+[Unit]
+Description=LSST Extendedness Pipeline - Daily Post-Processing
+Documentation=https://github.com/westover/lsst-extendedness
+After=network-online.target lsst-ingest.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/lsst-extendedness
+ExecStart=%h/lsst-extendedness/.venv/bin/python -m lsst_extendedness.cli process --config config/local.toml --window 15
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lsst-process
+
+# Resource limits
+MemoryMax=8G
+CPUQuota=100%
+
+# Timeout
+TimeoutStartSec=3600
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+Environment=OPENBLAS_NUM_THREADS=4
+
+[Install]
+WantedBy=default.target

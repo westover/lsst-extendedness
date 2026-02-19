@@ -1,0 +1,120 @@
+# ============================================================================
+# LSST Extendedness Pipeline - Git Ignore
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+.pdm-python
+
+# PDM
+.pdm.toml
+pdm.lock
+__pypackages__/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# Linting
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+
+# OS
+.DS_Store
+Thumbs.db
+*.orig
+
+# Data files (keep structure, ignore contents)
+data/*.db
+data/*.sqlite
+data/raw/*
+data/processed/*
+data/cutouts/*
+data/archive/*
+data/backups/*
+!data/**/.gitkeep
+
+# Logs (keep structure, ignore contents)
+logs/*
+logs/**/*
+!logs/**/.gitkeep
+
+# Temp files
+temp/*
+temp/**/*
+!temp/**/.gitkeep
+
+# Config with secrets
+config/local.toml
+config/config.py
+!config/default.toml
+!config/kafka_profiles.toml
+!config/config_example.py
+
+# Local testing
+*.local
+*.test
+
+# Profiling
+*.prof
+profile.stats
+memray.bin
+
+# Documentation build
+docs/_build/
+site/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+secrets/

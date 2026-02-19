@@ -1,0 +1,120 @@
+# ============================================================================
+# LSST Extendedness Pipeline - Pre-commit Configuration
+# ============================================================================
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# ============================================================================
+
+repos:
+  # ============================================================================
+  # GENERAL CHECKS
+  # ============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Prevent giant files
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+
+      # Ensure files end with newline
+      - id: end-of-file-fixer
+
+      # Trim trailing whitespace
+      - id: trailing-whitespace
+
+      # Check YAML/TOML syntax
+      - id: check-yaml
+      - id: check-toml
+
+      # Check JSON syntax
+      - id: check-json
+        exclude: '\.ipynb$'
+
+      # Prevent commits to main/master
+      - id: no-commit-to-branch
+        args: ['--branch', 'main', '--branch', 'master']
+
+      # Check for merge conflict markers
+      - id: check-merge-conflict
+
+      # Check for debugger imports
+      - id: debug-statements
+
+      # Detect private keys
+      - id: detect-private-key
+
+  # ============================================================================
+  # PYTHON - RUFF (linting + formatting)
+  # ============================================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.8
+    hooks:
+      # Linting
+      - id: ruff
+        args: ['--fix', '--exit-non-zero-on-fix']
+        types_or: [python, pyi]
+
+      # Formatting
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  # ============================================================================
+  # PYTHON - TYPE CHECKING (mypy)
+  # ============================================================================
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.5.0
+          - types-requests>=2.31.0
+          - pandas-stubs>=2.1.0
+        args: ['--ignore-missing-imports']
+        # Only run on src files (not tests, for speed)
+        files: ^src/
+
+  # ============================================================================
+  # SECURITY CHECKS
+  # ============================================================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: tests/
+
+  # ============================================================================
+  # DOCUMENTATION
+  # ============================================================================
+  - repo: https://github.com/pycqa/doc8
+    rev: v1.1.1
+    hooks:
+      - id: doc8
+        args: ['--max-line-length', '100']
+        types: [rst]
+
+  # ============================================================================
+  # COMMIT MESSAGES
+  # ============================================================================
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+# ============================================================================
+# CI SETTINGS
+# ============================================================================
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_branch: 'main'
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
