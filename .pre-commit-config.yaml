@@ -98,6 +98,19 @@ repos:
         types: [rst]
 
   # ============================================================================
+  # TESTING (pytest with coverage)
+  # ============================================================================
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pdm run pytest tests/ --cov=lsst_extendedness --cov-fail-under=85 -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit]
+
+  # ============================================================================
   # COMMIT MESSAGES
   # ============================================================================
   - repo: https://github.com/commitizen-tools/commitizen
