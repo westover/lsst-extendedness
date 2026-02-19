@@ -3,16 +3,20 @@ Alert source implementations for the LSST Extendedness Pipeline.
 
 This module provides flexible input sources that implement the AlertSource protocol:
 
-- KafkaSource: Real-time streaming from Kafka/ANTARES broker
+- ANTARESSource: High-level ANTARES broker client (recommended for LSST)
+- KafkaSource: Direct Kafka streaming with AVRO deserialization
 - FileSource: Import from AVRO/CSV files (for backfill or testing)
-- DatabaseSource: Pull from external databases
 - MockSource: Generate synthetic alerts (for testing)
 
 Example - Using different sources:
-    >>> from lsst_extendedness.sources import KafkaSource, MockSource
+    >>> from lsst_extendedness.sources import ANTARESSource, MockSource
     >>>
-    >>> # Production: Kafka
-    >>> source = KafkaSource(config)
+    >>> # Production: ANTARES broker (recommended)
+    >>> source = ANTARESSource(
+    ...     topics=["extragalactic_staging"],
+    ...     api_key="your_key",
+    ...     api_secret="your_secret",
+    ... )
     >>> source.connect()
     >>> for alert in source.fetch_alerts():
     ...     process(alert)
@@ -25,12 +29,14 @@ Example - Using different sources:
 To implement a custom source, see `sources/protocol.py` for the interface.
 """
 
+from lsst_extendedness.sources.antares import ANTARESSource
 from lsst_extendedness.sources.file import FileSource
 from lsst_extendedness.sources.kafka import KafkaSource
 from lsst_extendedness.sources.mock import MockSource
 from lsst_extendedness.sources.protocol import AlertSource, register_source
 
 __all__ = [
+    "ANTARESSource",
     "AlertSource",
     "FileSource",
     "KafkaSource",
