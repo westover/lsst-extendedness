@@ -70,7 +70,7 @@ repos:
           - pandas-stubs>=2.1.0
         args: ['--ignore-missing-imports']
         # Only run on src files (not tests, for speed)
-        files: ^src/
+        files: ^src/lsst_extendedness/
 
   # ============================================================================
   # SECURITY CHECKS
