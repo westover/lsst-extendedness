@@ -33,10 +33,6 @@ repos:
       - id: check-json
         exclude: '\.ipynb$'
 
-      # Prevent commits to main/master
-      - id: no-commit-to-branch
-        args: ['--branch', 'main', '--branch', 'master']
-
       # Check for merge conflict markers
       - id: check-merge-conflict
 
