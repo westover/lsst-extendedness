@@ -392,6 +392,234 @@ class MyCustomSource(AlertSource):
             self._client.disconnect()
 ```
 
+## ANTARES Integration
+
+This pipeline is designed to work with the [ANTARES broker](https://antares.noirlab.edu/), which filters and distributes LSST alerts. Understanding the ANTARES data model is essential for working with this codebase.
+
+### ANTARES Filter Example
+
+ANTARES uses Level 2 filters to determine which alerts pass through to downstream consumers. Here's a reference implementation showing how to access alert data:
+
+```python
+"""
+ANTARES Level 2 Filter for LSST Alerts
+Filters based on DIASource extendedness and SSSource presence
+"""
+
+def extendedness_filter(locus):
+    """
+    ANTARES filter function.
+
+    Parameters
+    ----------
+    locus : antares.devkit.locus.Locus
+        ANTARES locus object containing alert information.
+        A locus represents a unique sky position with associated alerts.
+
+    Returns
+    -------
+    bool
+        True if the alert passes the filter
+    """
+    # Configuration thresholds
+    EXTENDEDNESS_MEDIAN_MIN = 0.0
+    EXTENDEDNESS_MEDIAN_MAX = 1.0
+    REQUIRE_SSSOURCE = True
+    REASSOC_WINDOW_DAYS = 1.0
+
+    # Get the most recent alert from the locus
+    if not locus.alerts:
+        return False
+
+    latest_alert = locus.alerts[-1]
+
+    # ==== Access DIASource properties ====
+    # Properties come from the DIASource table
+    extendedness_median = latest_alert.properties.get('extendednessMedian')
+    extendedness_min = latest_alert.properties.get('extendednessMin')
+    extendedness_max = latest_alert.properties.get('extendednessMax')
+    obs_time = latest_alert.properties.get('midPointTai')
+
+    # Check if all required fields are present
+    if None in [extendedness_median, extendedness_min, extendedness_max]:
+        return False
+
+    # ==== Check for SSSource (Solar System association) ====
+    has_sssource = False
+    ssobject_reassoc_time = None
+
+    # Method 1: Check via alert properties
+    if hasattr(latest_alert, 'properties'):
+        sssource_fields = ['ssObjectId', 'ssObject']
+        has_sssource = any(
+            latest_alert.properties.get(field) is not None
+            for field in sssource_fields
+        )
+        ssobject_reassoc_time = latest_alert.properties.get('ssObjectReassocTimeMjdTai')
+
+    # Method 2: Check via raw alert packet (if available)
+    if not has_sssource and hasattr(latest_alert, 'packet'):
+        if 'ssObject' in latest_alert.packet and latest_alert.packet['ssObject'] is not None:
+            has_sssource = True
+            if ssobject_reassoc_time is None:
+                ssobject_reassoc_time = latest_alert.packet['ssObject'].get(
+                    'ssObjectReassocTimeMjdTai'
+                )
+
+    # Method 3: Check via locus tags
+    if not has_sssource and hasattr(locus, 'tags'):
+        sso_tags = ['solar_system', 'sso', 'asteroid', 'comet']
+        has_sssource = any(tag in locus.tags for tag in sso_tags)
+
+    # ==== Apply filter logic ====
+    passes_extendedness = (
+        EXTENDEDNESS_MEDIAN_MIN <= extendedness_median <= EXTENDEDNESS_MEDIAN_MAX
+        and extendedness_min >= 0.0
+        and extendedness_max <= 1.0
+    )
+
+    # Check for recent reassociation
+    is_recent_reassoc = False
+    if has_sssource and ssobject_reassoc_time is not None and obs_time is not None:
+        time_diff = abs(ssobject_reassoc_time - obs_time)
+        is_recent_reassoc = time_diff <= REASSOC_WINDOW_DAYS
+
+    if REQUIRE_SSSOURCE:
+        # Pass if has SSSource AND (good extendedness OR recent reassociation)
+        return has_sssource and (passes_extendedness or is_recent_reassoc)
+    else:
+        # Pass if NO SSSource AND good extendedness
+        return not has_sssource and passes_extendedness
+
+
+# ANTARES metadata (required by broker)
+filter_name = "extendedness_sssource_reassoc_filter"
+filter_version = "2.0.0"
+filter_description = "Filters based on extendedness, SSSource presence, and reassociations"
+tags = ["extended_sources", "morphology", "solar_system_objects", "reassociation"]
+
+# Entry point called by ANTARES
+run = extendedness_filter
+```
+
+### Key LSST Alert Fields
+
+Understanding the LSST alert schema is critical. Here are the key fields:
+
+| Field | Table | Type | Description |
+|-------|-------|------|-------------|
+| `alertId` | Alert | int | Unique alert identifier |
+| `diaSourceId` | DIASource | int | Unique detection identifier |
+| `diaObjectId` | DIASource | int | Associated variable object |
+| `ra`, `decl` | DIASource | float | Sky coordinates (degrees) |
+| `midPointTai` | DIASource | float | Observation time (MJD) |
+| `filterName` | DIASource | str | Filter band (u/g/r/i/z/y) |
+| `psFlux` | DIASource | float | Point source flux |
+| `psFluxErr` | DIASource | float | Flux uncertainty |
+| `snr` | DIASource | float | Signal-to-noise ratio |
+| `extendednessMedian` | DIASource | float | Extendedness metric (0=point, 1=extended) |
+| `extendednessMin` | DIASource | float | Minimum extendedness |
+| `extendednessMax` | DIASource | float | Maximum extendedness |
+| `ssObjectId` | SSObject | str | Solar system object ID |
+| `ssObjectReassocTimeMjdTai` | SSObject | float | Last reassociation time |
+| `trailLength` | DIASource | float | Trail length (arcsec) |
+| `trailAngle` | DIASource | float | Trail position angle |
+| `pixelFlags*` | DIASource | bool | Various pixel quality flags |
+
+### Alert Packet Structure
+
+LSST alerts come as AVRO-encoded packets with this structure:
+
+```python
+{
+    "alertId": 12345,
+    "diaSource": {
+        "diaSourceId": 123450001,
+        "diaObjectId": 12345,
+        "ra": 180.12345,
+        "decl": 45.67890,
+        "midPointTai": 60100.5,
+        "filterName": "r",
+        "psFlux": 1500.0,
+        "psFluxErr": 15.0,
+        "snr": 100.0,
+        "extendednessMedian": 0.42,
+        "extendednessMin": 0.38,
+        "extendednessMax": 0.48,
+        "trailLength": 0.0,
+        "trailAngle": 0.0,
+        "pixelFlagsBad": False,
+        "pixelFlagsCr": False,
+        # ... more fields
+    },
+    "ssObject": {  # Null if not associated with solar system object
+        "ssObjectId": "SSO_2024_AB123",
+        "ssObjectReassocTimeMjdTai": 60099.5,
+        # ... more fields
+    },
+    "prvDiaSources": [  # Previous detections of this object
+        # Array of DIASource records
+    ],
+    "prvDiaForcedSources": [  # Forced photometry
+        # Array of forced source records
+    ],
+    "cutoutScience": b"...",    # FITS image data
+    "cutoutTemplate": b"...",   # Template image data
+    "cutoutDifference": b"...", # Difference image data
+}
+```
+
+### Reassociation Detection
+
+A key science case is detecting when a DIASource gets reassociated with a different SSObject (solar system object). This happens when:
+
+1. **New association**: Source had no SSObject, now has one
+2. **Changed association**: Source moved from one SSObject to another
+3. **Updated reassociation**: `ssObjectReassocTimeMjdTai` timestamp changed
+
+```python
+# Track state across alerts
+if str(dia_source_id) in self.processed_sources:
+    prev_state = self.processed_sources[str(dia_source_id)]
+    prev_ss_id = prev_state.get('ssObjectId')
+    prev_reassoc_time = prev_state.get('reassoc_time')
+
+    # Detect reassociation scenarios
+    if prev_ss_id is None and current_ss_object_id is not None:
+        is_reassociation = True
+        reassoc_reason = 'new_association'
+
+    elif prev_ss_id != current_ss_object_id:
+        is_reassociation = True
+        reassoc_reason = 'changed_association'
+
+    elif reassoc_time != prev_reassoc_time:
+        is_reassociation = True
+        reassoc_reason = 'updated_reassociation'
+```
+
+### Using antares-client
+
+The `antares-client` Python package provides access to the ANTARES API:
+
+```python
+from antares_client import StreamingClient
+
+# Create client with credentials
+client = StreamingClient(
+    topics=['extendedness-filtered'],
+    api_key='your-api-key',
+    api_secret='your-api-secret',
+)
+
+# Consume alerts
+for locus, alert in client.iter():
+    # Process each alert
+    process_alert(locus, alert)
+```
+
+**Note:** The `antares-client` package depends on `bson-modern` (a maintained fork of `bson`) for BSON serialization. This is handled automatically via PDM's dependency resolution.
+
 ## Getting Help
 
 - **Issues:** [GitHub Issues](https://github.com/westover/lsst-extendedness/issues)
