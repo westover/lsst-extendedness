@@ -46,18 +46,18 @@ from lsst_extendedness.query import shortcuts
 from lsst_extendedness.query.export import (
     DataExporter,
     export_dataframe,
-    export_query,
-    export_today,
-    export_recent,
     export_minimoon_candidates,
+    export_query,
+    export_recent,
+    export_today,
 )
 
 __all__ = [
-    "shortcuts",
     "DataExporter",
     "export_dataframe",
-    "export_query",
-    "export_today",
-    "export_recent",
     "export_minimoon_candidates",
+    "export_query",
+    "export_recent",
+    "export_today",
+    "shortcuts",
 ]

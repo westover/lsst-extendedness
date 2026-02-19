@@ -33,13 +33,13 @@ The schema is defined in `storage/schema.py` and includes:
 """
 
 from lsst_extendedness.storage.protocol import AlertStorage
-from lsst_extendedness.storage.sqlite import SQLiteStorage
 from lsst_extendedness.storage.schema import SCHEMA_VERSION, create_schema, get_schema_sql
+from lsst_extendedness.storage.sqlite import SQLiteStorage
 
 __all__ = [
+    "SCHEMA_VERSION",
     "AlertStorage",
     "SQLiteStorage",
-    "SCHEMA_VERSION",
     "create_schema",
     "get_schema_sql",
 ]

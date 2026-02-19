@@ -7,13 +7,11 @@ Tests the Pydantic models for:
 - IngestionRun lifecycle
 """
 
-from datetime import datetime
 
 import pytest
 
-from lsst_extendedness.models import AlertRecord, ProcessingResult, IngestionRun
+from lsst_extendedness.models import AlertRecord, IngestionRun, ProcessingResult
 from lsst_extendedness.models.runs import RunStatus
-from tests.fixtures import SAMPLE_AVRO_RECORD, SAMPLE_AVRO_NO_SSO
 
 
 class TestAlertRecord:

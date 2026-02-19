@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from ..models.alerts import ProcessingResult
-from .base import BaseProcessor, ProcessorConfig
+from .base import ProcessorConfig
 from .registry import get_processor, list_processors, load_builtin_processors
 
 if TYPE_CHECKING:
@@ -76,7 +76,7 @@ class ProcessingRunner:
 
     def __init__(
         self,
-        storage: "SQLiteStorage",
+        storage: SQLiteStorage,
         auto_load_builtin: bool = True,
     ):
         """Initialize runner.
@@ -221,6 +221,7 @@ class ProcessingRunner:
             List of processor info dicts
         """
         from .registry import get_processor_info
+
         return get_processor_info()
 
     def get_processor_history(
@@ -249,7 +250,7 @@ class ProcessingRunner:
 
 
 def run_processing(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     *,
     processor: str | None = None,
     window_days: int = 15,

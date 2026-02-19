@@ -28,12 +28,12 @@ The pipeline is designed to be:
 - Observable: Structured logging and metrics
 """
 
-from lsst_extendedness.ingest.pipeline import IngestionPipeline
 from lsst_extendedness.ingest.deserializer import AlertDeserializer
+from lsst_extendedness.ingest.pipeline import IngestionPipeline
 from lsst_extendedness.ingest.state import StateTracker
 
 __all__ = [
-    "IngestionPipeline",
     "AlertDeserializer",
+    "IngestionPipeline",
     "StateTracker",
 ]

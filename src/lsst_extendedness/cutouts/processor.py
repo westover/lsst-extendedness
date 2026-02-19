@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from ..models.alerts import AlertRecord
 
 logger = structlog.get_logger(__name__)
@@ -81,7 +83,7 @@ class CutoutProcessor:
 
     def _get_output_path(
         self,
-        alert: "AlertRecord",
+        alert: AlertRecord,
         cutout_type: str,
     ) -> Path:
         """Generate output path for a cutout.
@@ -168,7 +170,7 @@ class CutoutProcessor:
 
     def process_alert(
         self,
-        alert: "AlertRecord",
+        alert: AlertRecord,
         avro_record: dict[str, Any],
     ) -> CutoutPaths:
         """Extract cutouts from an alert.
@@ -210,7 +212,7 @@ class CutoutProcessor:
 
     def process_batch(
         self,
-        alerts_with_avro: list[tuple["AlertRecord", dict[str, Any]]],
+        alerts_with_avro: list[tuple[AlertRecord, dict[str, Any]]],
     ) -> list[CutoutPaths]:
         """Process a batch of alerts.
 
@@ -315,7 +317,7 @@ def extract_cutout_stamps(
     return stamps
 
 
-def load_cutout_as_array(path: Path | str) -> "np.ndarray":
+def load_cutout_as_array(path: Path | str) -> np.ndarray:
     """Load a FITS cutout as numpy array.
 
     Args:
@@ -327,9 +329,7 @@ def load_cutout_as_array(path: Path | str) -> "np.ndarray":
     try:
         from astropy.io import fits
     except ImportError as e:
-        raise ImportError(
-            "astropy required for FITS loading. Install with: pdm add astropy"
-        ) from e
+        raise ImportError("astropy required for FITS loading. Install with: pdm add astropy") from e
 
     path = Path(path)
 

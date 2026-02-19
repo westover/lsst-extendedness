@@ -83,7 +83,7 @@ class AlertStorage(Protocol):
         """
         ...
 
-    def write_batch(self, alerts: Sequence["AlertRecord"]) -> int:
+    def write_batch(self, alerts: Sequence[AlertRecord]) -> int:
         """Write a batch of alerts to storage.
 
         This is the primary write method for alert data.
@@ -109,7 +109,7 @@ class AlertStorage(Protocol):
         """
         ...
 
-    def write_processing_result(self, result: "ProcessingResult") -> int:
+    def write_processing_result(self, result: ProcessingResult) -> int:
         """Write a processing result to storage.
 
         Stores the output of a post-processor for later retrieval.
@@ -125,7 +125,7 @@ class AlertStorage(Protocol):
         """
         ...
 
-    def write_ingestion_run(self, run: "IngestionRun") -> int:
+    def write_ingestion_run(self, run: IngestionRun) -> int:
         """Write an ingestion run record.
 
         Creates or updates an ingestion run record for audit trail.

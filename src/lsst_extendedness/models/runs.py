@@ -181,7 +181,7 @@ class IngestionRun(BaseModel):
         return data
 
     @classmethod
-    def from_db_row(cls, row: dict[str, Any]) -> "IngestionRun":
+    def from_db_row(cls, row: dict[str, Any]) -> IngestionRun:
         """Create IngestionRun from a database row."""
         import json
 

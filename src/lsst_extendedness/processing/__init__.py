@@ -50,12 +50,12 @@ Running processors:
 """
 
 from lsst_extendedness.processing.base import BaseProcessor
-from lsst_extendedness.processing.registry import register_processor, get_processor
+from lsst_extendedness.processing.registry import get_processor, register_processor
 from lsst_extendedness.processing.runner import ProcessingRunner
 
 __all__ = [
     "BaseProcessor",
-    "register_processor",
-    "get_processor",
     "ProcessingRunner",
+    "get_processor",
+    "register_processor",
 ]

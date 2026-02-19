@@ -25,15 +25,15 @@ Example - Using different sources:
 To implement a custom source, see `sources/protocol.py` for the interface.
 """
 
-from lsst_extendedness.sources.protocol import AlertSource, register_source
-from lsst_extendedness.sources.kafka import KafkaSource
 from lsst_extendedness.sources.file import FileSource
+from lsst_extendedness.sources.kafka import KafkaSource
 from lsst_extendedness.sources.mock import MockSource
+from lsst_extendedness.sources.protocol import AlertSource, register_source
 
 __all__ = [
     "AlertSource",
-    "register_source",
-    "KafkaSource",
     "FileSource",
+    "KafkaSource",
     "MockSource",
+    "register_source",
 ]

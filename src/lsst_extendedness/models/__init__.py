@@ -18,6 +18,6 @@ from lsst_extendedness.models.runs import IngestionRun
 
 __all__ = [
     "AlertRecord",
-    "ProcessingResult",
     "IngestionRun",
+    "ProcessingResult",
 ]

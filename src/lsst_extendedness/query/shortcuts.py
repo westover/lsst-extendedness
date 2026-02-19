@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pandas as pd
+
     from ..storage.sqlite import SQLiteStorage
 
 
-def _get_storage(storage: "SQLiteStorage | None" = None) -> "SQLiteStorage":
+def _get_storage(storage: SQLiteStorage | None = None) -> SQLiteStorage:
     """Get storage instance, using default if not provided."""
     if storage is not None:
         return storage
@@ -33,10 +34,10 @@ def _get_storage(storage: "SQLiteStorage | None" = None) -> "SQLiteStorage":
 
 
 def _query_to_df(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     query: str,
     params: tuple = (),
-) -> "pd.DataFrame":
+) -> pd.DataFrame:
     """Execute query and return as DataFrame."""
     import pandas as pd
 
@@ -44,7 +45,7 @@ def _query_to_df(
     return pd.DataFrame(rows)
 
 
-def today(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def today(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get today's alerts.
 
     Args:
@@ -57,7 +58,7 @@ def today(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
     return _query_to_df(storage, "SELECT * FROM v_today_alerts")
 
 
-def recent(days: int = 7, storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def recent(days: int = 7, storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get recent alerts.
 
     Args:
@@ -79,7 +80,7 @@ def recent(days: int = 7, storage: "SQLiteStorage | None" = None) -> "pd.DataFra
     )
 
 
-def point_sources(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def point_sources(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get point-like sources (stars).
 
     Extendedness < 0.3
@@ -94,7 +95,7 @@ def point_sources(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
     return _query_to_df(storage, "SELECT * FROM v_point_sources")
 
 
-def extended_sources(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def extended_sources(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get extended sources (galaxies).
 
     Extendedness > 0.7
@@ -109,7 +110,7 @@ def extended_sources(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
     return _query_to_df(storage, "SELECT * FROM v_extended_sources")
 
 
-def minimoon_candidates(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def minimoon_candidates(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get potential minimoon candidates.
 
     SSO sources with intermediate extendedness (0.3-0.7)
@@ -124,7 +125,7 @@ def minimoon_candidates(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame
     return _query_to_df(storage, "SELECT * FROM v_minimoon_candidates")
 
 
-def sso_alerts(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def sso_alerts(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get all alerts with SSObject associations.
 
     Args:
@@ -137,7 +138,7 @@ def sso_alerts(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
     return _query_to_df(storage, "SELECT * FROM v_sso_alerts")
 
 
-def reassociations(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
+def reassociations(storage: SQLiteStorage | None = None) -> pd.DataFrame:
     """Get all reassociation events.
 
     Args:
@@ -152,8 +153,8 @@ def reassociations(storage: "SQLiteStorage | None" = None) -> "pd.DataFrame":
 
 def by_source(
     dia_source_id: int,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get all alerts for a specific DIA source.
 
     Args:
@@ -173,8 +174,8 @@ def by_source(
 
 def by_object(
     dia_object_id: int,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get all alerts for a specific DIA object.
 
     Args:
@@ -194,8 +195,8 @@ def by_object(
 
 def by_sso(
     ss_object_id: str,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get all alerts for a specific SSObject.
 
     Args:
@@ -218,8 +219,8 @@ def in_region(
     ra_max: float,
     dec_min: float,
     dec_max: float,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get alerts in a sky region (box query).
 
     Args:
@@ -248,8 +249,8 @@ def in_region(
 def in_time_window(
     start_mjd: float,
     end_mjd: float,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get alerts in a time window.
 
     Args:
@@ -270,8 +271,8 @@ def in_time_window(
 
 def with_filter(
     filter_name: str,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get alerts observed with a specific filter.
 
     Args:
@@ -291,8 +292,8 @@ def with_filter(
 
 def high_snr(
     min_snr: float = 50.0,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get high signal-to-noise alerts.
 
     Args:
@@ -313,8 +314,8 @@ def high_snr(
 def processing_results(
     processor_name: str | None = None,
     limit: int = 100,
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Get recent processing results.
 
     Args:
@@ -345,7 +346,7 @@ def processing_results(
         )
 
 
-def stats(storage: "SQLiteStorage | None" = None) -> dict:
+def stats(storage: SQLiteStorage | None = None) -> dict:
     """Get database statistics.
 
     Args:
@@ -361,8 +362,8 @@ def stats(storage: "SQLiteStorage | None" = None) -> dict:
 def custom(
     sql: str,
     params: tuple = (),
-    storage: "SQLiteStorage | None" = None,
-) -> "pd.DataFrame":
+    storage: SQLiteStorage | None = None,
+) -> pd.DataFrame:
     """Execute custom SQL query.
 
     Args:

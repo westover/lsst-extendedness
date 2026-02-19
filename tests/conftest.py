@@ -25,11 +25,10 @@ import pytest
 from lsst_extendedness.models import AlertRecord
 from lsst_extendedness.sources import MockSource
 from lsst_extendedness.storage import SQLiteStorage
+from tests.fixtures.avro_samples import SAMPLE_AVRO_NO_SSO, SAMPLE_AVRO_RECORD
 
 # Import fixtures from fixtures module
 from tests.fixtures.factories import AlertFactory
-from tests.fixtures.avro_samples import SAMPLE_AVRO_RECORD, SAMPLE_AVRO_NO_SSO
-
 
 # ============================================================================
 # FACTORY FIXTURES
@@ -138,9 +137,10 @@ def populated_db(temp_db: SQLiteStorage, alert_factory: AlertFactory) -> SQLiteS
     # Reassociations
     for _ in range(5):
         alert = alert_factory.create_minimoon_candidate()
-        alert = AlertRecord(
-            **{**alert.model_dump(), "is_reassociation": True, "reassociation_reason": "new_association"}
-        )
+        data = alert.model_dump()
+        data["is_reassociation"] = True
+        data["reassociation_reason"] = "new_association"
+        alert = AlertRecord(**data)
         alerts.append(alert)
 
     temp_db.write_batch(alerts)

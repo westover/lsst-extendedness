@@ -9,11 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from ..storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
@@ -235,7 +237,7 @@ class FilterEngine:
         df = engine.apply_saved("my_filter")
     """
 
-    def __init__(self, storage: "SQLiteStorage"):
+    def __init__(self, storage: SQLiteStorage):
         """Initialize filter engine.
 
         Args:
@@ -246,7 +248,8 @@ class FilterEngine:
 
     def _ensure_filter_table(self) -> None:
         """Ensure saved filters table exists."""
-        self.storage.execute("""
+        self.storage.execute(
+            """
             CREATE TABLE IF NOT EXISTS saved_filters (
                 name TEXT PRIMARY KEY,
                 description TEXT,
@@ -254,7 +257,8 @@ class FilterEngine:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
-        """)
+        """
+        )
 
     def filter(
         self,
@@ -268,7 +272,7 @@ class FilterEngine:
         mjd_min: float | None = None,
         mjd_max: float | None = None,
         limit: int | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """Apply quick filter with common parameters.
 
         Args:
@@ -306,7 +310,7 @@ class FilterEngine:
 
         return self.apply(config)
 
-    def apply(self, config: FilterConfig) -> "pd.DataFrame":
+    def apply(self, config: FilterConfig) -> pd.DataFrame:
         """Apply a filter configuration.
 
         Args:
@@ -386,7 +390,7 @@ class FilterEngine:
         data = json.loads(rows[0]["config_json"])
         return FilterConfig.from_dict(data)
 
-    def apply_saved(self, name: str) -> "pd.DataFrame":
+    def apply_saved(self, name: str) -> pd.DataFrame:
         """Apply a saved filter by name.
 
         Args:
@@ -422,11 +426,11 @@ class FilterEngine:
         Returns:
             True if deleted, False if not found
         """
-        cursor = self.storage.execute(
+        rows_affected = self.storage.execute(
             "DELETE FROM saved_filters WHERE name = ?",
             (name,),
         )
-        return cursor.rowcount > 0
+        return rows_affected > 0
 
     def copy_to_filtered(self, config: FilterConfig) -> int:
         """Apply filter and copy results to alerts_filtered table.

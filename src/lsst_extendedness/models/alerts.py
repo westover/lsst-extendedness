@@ -93,7 +93,9 @@ class AlertRecord(BaseModel):
 
     # Temporal
     mjd: float = Field(..., gt=0, description="Modified Julian Date")
-    ingested_at: datetime = Field(default_factory=datetime.utcnow, description="Ingestion timestamp")
+    ingested_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Ingestion timestamp"
+    )
 
     # Photometry
     filter_name: str | None = Field(default=None, description="Filter band (g, r, i, z, y, u)")
@@ -149,7 +151,7 @@ class AlertRecord(BaseModel):
         return v.lower()
 
     @classmethod
-    def from_avro(cls, avro_record: dict[str, Any]) -> "AlertRecord":
+    def from_avro(cls, avro_record: dict[str, Any]) -> AlertRecord:
         """Create an AlertRecord from an AVRO-deserialized alert packet.
 
         This method handles the nested structure of LSST alert packets,
@@ -226,7 +228,7 @@ class AlertRecord(BaseModel):
         return data
 
     @classmethod
-    def from_db_row(cls, row: dict[str, Any]) -> "AlertRecord":
+    def from_db_row(cls, row: dict[str, Any]) -> AlertRecord:
         """Create AlertRecord from a database row.
 
         Deserializes JSON fields from strings.
@@ -295,7 +297,7 @@ class ProcessingResult(BaseModel):
         return data
 
     @classmethod
-    def from_db_row(cls, row: dict[str, Any]) -> "ProcessingResult":
+    def from_db_row(cls, row: dict[str, Any]) -> ProcessingResult:
         """Create ProcessingResult from a database row."""
         data = dict(row)
         if isinstance(data.get("records"), str):

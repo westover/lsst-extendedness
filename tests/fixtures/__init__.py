@@ -6,11 +6,11 @@ This module provides:
 - Sample AVRO records: For testing deserialization
 """
 
+from tests.fixtures.avro_samples import SAMPLE_AVRO_NO_SSO, SAMPLE_AVRO_RECORD
 from tests.fixtures.factories import AlertFactory
-from tests.fixtures.avro_samples import SAMPLE_AVRO_RECORD, SAMPLE_AVRO_NO_SSO
 
 __all__ = [
-    "AlertFactory",
-    "SAMPLE_AVRO_RECORD",
     "SAMPLE_AVRO_NO_SSO",
+    "SAMPLE_AVRO_RECORD",
+    "AlertFactory",
 ]

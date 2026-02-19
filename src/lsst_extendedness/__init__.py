@@ -28,40 +28,34 @@ __author__ = "James Westover"
 __email__ = "james@westover.xyz"
 
 # Core models
+# Configuration
+from lsst_extendedness.config.settings import Settings, get_settings
 from lsst_extendedness.models.alerts import AlertRecord, ProcessingResult
 from lsst_extendedness.models.runs import IngestionRun
-
-# Storage
-from lsst_extendedness.storage.sqlite import SQLiteStorage
-from lsst_extendedness.storage.protocol import AlertStorage
+from lsst_extendedness.sources.file import FileSource
+from lsst_extendedness.sources.kafka import KafkaSource
+from lsst_extendedness.sources.mock import MockSource
 
 # Sources
 from lsst_extendedness.sources.protocol import AlertSource
-from lsst_extendedness.sources.kafka import KafkaSource
-from lsst_extendedness.sources.file import FileSource
-from lsst_extendedness.sources.mock import MockSource
+from lsst_extendedness.storage.protocol import AlertStorage
 
-# Configuration
-from lsst_extendedness.config.settings import Settings, get_settings
+# Storage
+from lsst_extendedness.storage.sqlite import SQLiteStorage
 
 __all__ = [
-    # Version info
-    "__version__",
+    "AlertRecord",
+    "AlertSource",
+    "AlertStorage",
+    "FileSource",
+    "IngestionRun",
+    "KafkaSource",
+    "MockSource",
+    "ProcessingResult",
+    "SQLiteStorage",
+    "Settings",
     "__author__",
     "__email__",
-    # Models
-    "AlertRecord",
-    "ProcessingResult",
-    "IngestionRun",
-    # Storage
-    "SQLiteStorage",
-    "AlertStorage",
-    # Sources
-    "AlertSource",
-    "KafkaSource",
-    "FileSource",
-    "MockSource",
-    # Config
-    "Settings",
+    "__version__",
     "get_settings",
 ]

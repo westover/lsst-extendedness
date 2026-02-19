@@ -20,10 +20,10 @@ Example:
 Configuration files use TOML format. See config/default.toml for all options.
 """
 
-from lsst_extendedness.config.settings import Settings, get_settings, KafkaSettings
+from lsst_extendedness.config.settings import KafkaSettings, Settings, get_settings
 
 __all__ = [
+    "KafkaSettings",
     "Settings",
     "get_settings",
-    "KafkaSettings",
 ]

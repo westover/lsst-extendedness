@@ -38,13 +38,13 @@ Presets are available for common use cases:
     >>> df = engine.apply(config)
 """
 
+from lsst_extendedness.filter import presets
 from lsst_extendedness.filter.engine import (
     FilterCondition,
     FilterConfig,
     FilterEngine,
     FilterOperator,
 )
-from lsst_extendedness.filter import presets
 
 __all__ = [
     "FilterCondition",

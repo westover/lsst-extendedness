@@ -38,11 +38,11 @@ def _import_kafka():
     if _confluent_kafka is None:
         try:
             import confluent_kafka
+
             _confluent_kafka = confluent_kafka
         except ImportError as e:
             raise ImportError(
-                "confluent-kafka is required for KafkaSource. "
-                "Install with: pdm install"
+                "confluent-kafka is required for KafkaSource. " "Install with: pdm install"
             ) from e
     return _confluent_kafka
 
@@ -53,11 +53,11 @@ def _import_fastavro():
     if _fastavro is None:
         try:
             import fastavro
+
             _fastavro = fastavro
         except ImportError as e:
             raise ImportError(
-                "fastavro is required for KafkaSource. "
-                "Install with: pdm install"
+                "fastavro is required for KafkaSource. " "Install with: pdm install"
             ) from e
     return _fastavro
 
@@ -188,6 +188,7 @@ class KafkaSource:
                 # Log error but continue processing
                 # In production, you might want to send to dead letter queue
                 import logging
+
                 logging.getLogger(__name__).error(
                     f"Error deserializing alert: {e}",
                     exc_info=True,
@@ -210,8 +211,6 @@ class KafkaSource:
         if self._consumer is None:
             raise RuntimeError("Source not connected")
 
-        kafka = _import_kafka()
-
         assignment = self._consumer.assignment()
         if not assignment:
             return {}
@@ -227,7 +226,7 @@ class KafkaSource:
             committed_offset = committed.offset if committed else -1
 
             # Get high water mark
-            low, high = self._consumer.get_watermark_offsets(tp, timeout=5.0)
+            _low, high = self._consumer.get_watermark_offsets(tp, timeout=5.0)
 
             lag = high - committed_offset if committed_offset >= 0 else high
 

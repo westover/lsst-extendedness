@@ -10,8 +10,9 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Type
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -21,10 +22,10 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 # Global processor registry
-_PROCESSORS: dict[str, Type["BaseProcessor"]] = {}
+_PROCESSORS: dict[str, type[BaseProcessor]] = {}
 
 
-def register_processor(name: str) -> Callable[[Type["BaseProcessor"]], Type["BaseProcessor"]]:
+def register_processor(name: str) -> Callable[[type[BaseProcessor]], type[BaseProcessor]]:
     """Decorator to register a processor class.
 
     Usage:
@@ -39,7 +40,7 @@ def register_processor(name: str) -> Callable[[Type["BaseProcessor"]], Type["Bas
         Decorator function
     """
 
-    def decorator(cls: Type["BaseProcessor"]) -> Type["BaseProcessor"]:
+    def decorator(cls: type[BaseProcessor]) -> type[BaseProcessor]:
         if name in _PROCESSORS:
             logger.warning(
                 "processor_replaced",
@@ -54,7 +55,7 @@ def register_processor(name: str) -> Callable[[Type["BaseProcessor"]], Type["Bas
     return decorator
 
 
-def get_processor(name: str) -> Type["BaseProcessor"] | None:
+def get_processor(name: str) -> type[BaseProcessor] | None:
     """Get processor class by name.
 
     Args:
@@ -66,7 +67,7 @@ def get_processor(name: str) -> Type["BaseProcessor"] | None:
     return _PROCESSORS.get(name)
 
 
-def list_processors() -> dict[str, Type["BaseProcessor"]]:
+def list_processors() -> dict[str, type[BaseProcessor]]:
     """Get all registered processors.
 
     Returns:
@@ -182,12 +183,14 @@ def get_processor_info() -> list[dict[str, str]]:
     """
     info = []
     for name, cls in _PROCESSORS.items():
-        info.append({
-            "name": name,
-            "class": cls.__name__,
-            "version": getattr(cls, "version", "unknown"),
-            "description": getattr(cls, "description", "No description"),
-        })
+        info.append(
+            {
+                "name": name,
+                "class": cls.__name__,
+                "version": getattr(cls, "version", "unknown"),
+                "description": getattr(cls, "description", "No description"),
+            }
+        )
     return info
 
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from ...models.alerts import ProcessingResult
 from ..base import AggregatingProcessor, BaseProcessor, FilteringProcessor
 from ..registry import register_processor
-from ...models.alerts import ProcessingResult
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -30,7 +30,7 @@ class ExampleProcessor(BaseProcessor):
     description = "Example processor computing basic alert statistics"
     default_window_days = 7
 
-    def process(self, df: "pd.DataFrame") -> ProcessingResult:
+    def process(self, df: pd.DataFrame) -> ProcessingResult:
         """Compute basic statistics on alerts.
 
         Args:
@@ -162,7 +162,7 @@ class SourceSummaryProcessor(AggregatingProcessor):
     default_window_days = 30
     group_by = "dia_object_id"
 
-    def aggregate(self, group_df: "pd.DataFrame") -> dict[str, Any] | None:
+    def aggregate(self, group_df: pd.DataFrame) -> dict[str, Any] | None:
         """Compute summary for one source.
 
         Args:
@@ -224,7 +224,7 @@ class ReassociationTracker(BaseProcessor):
             ORDER BY mjd ASC
         """
 
-    def process(self, df: "pd.DataFrame") -> ProcessingResult:
+    def process(self, df: pd.DataFrame) -> ProcessingResult:
         """Analyze reassociation events.
 
         Args:

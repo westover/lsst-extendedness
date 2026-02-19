@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -18,6 +17,7 @@ from ..models.alerts import ProcessingResult
 
 if TYPE_CHECKING:
     import pandas as pd
+
     from ..storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
@@ -87,7 +87,7 @@ class BaseProcessor(ABC):
         pass
 
     @abstractmethod
-    def process(self, df: "pd.DataFrame") -> ProcessingResult:
+    def process(self, df: pd.DataFrame) -> ProcessingResult:
         """Process a dataframe of alerts.
 
         This is the main method to implement. The dataframe contains
@@ -128,7 +128,7 @@ class BaseProcessor(ABC):
         """
         return (start_mjd, end_mjd)
 
-    def pre_process(self, df: "pd.DataFrame") -> "pd.DataFrame":
+    def pre_process(self, df: pd.DataFrame) -> pd.DataFrame:
         """Pre-processing hook before main processing.
 
         Override to add data cleaning, filtering, or feature engineering.
@@ -169,6 +169,7 @@ class BaseProcessor(ABC):
             ProcessingResult with analysis output
         """
         import pandas as pd
+
         from ..utils.time import current_mjd, days_ago_mjd
 
         # Calculate time window
@@ -220,11 +221,13 @@ class BaseProcessor(ABC):
         result = self.post_process(result)
 
         # Add metadata
-        result.metadata.update({
-            "window_start_mjd": start_mjd,
-            "window_end_mjd": end_mjd,
-            "input_rows": len(rows),
-        })
+        result.metadata.update(
+            {
+                "window_start_mjd": start_mjd,
+                "window_end_mjd": end_mjd,
+                "input_rows": len(rows),
+            }
+        )
 
         logger.info(
             "processor_completed",
@@ -266,7 +269,7 @@ class FilteringProcessor(BaseProcessor):
         """
         raise NotImplementedError
 
-    def process(self, df: "pd.DataFrame") -> ProcessingResult:
+    def process(self, df: pd.DataFrame) -> ProcessingResult:
         """Filter dataframe using filter_condition.
 
         Args:
@@ -299,7 +302,7 @@ class AggregatingProcessor(BaseProcessor):
     group_by: str = "dia_object_id"
 
     @abstractmethod
-    def aggregate(self, group_df: "pd.DataFrame") -> dict[str, Any] | None:
+    def aggregate(self, group_df: pd.DataFrame) -> dict[str, Any] | None:
         """Compute aggregate metrics for a group of alerts.
 
         Args:
@@ -310,7 +313,7 @@ class AggregatingProcessor(BaseProcessor):
         """
         raise NotImplementedError
 
-    def process(self, df: "pd.DataFrame") -> ProcessingResult:
+    def process(self, df: pd.DataFrame) -> ProcessingResult:
         """Group and aggregate alerts.
 
         Args:

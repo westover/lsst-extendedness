@@ -21,6 +21,6 @@ from lsst_extendedness.processing.builtin.example import (
 __all__ = [
     "ExampleProcessor",
     "MiniMoonCandidateProcessor",
-    "SourceSummaryProcessor",
     "ReassociationTracker",
+    "SourceSummaryProcessor",
 ]

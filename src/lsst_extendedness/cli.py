@@ -27,7 +27,7 @@ from rich.table import Table
 from lsst_extendedness import __version__
 from lsst_extendedness.config import get_settings, load_settings
 from lsst_extendedness.storage import SQLiteStorage
-from lsst_extendedness.utils.logging import setup_logging, get_logger
+from lsst_extendedness.utils.logging import get_logger, setup_logging
 
 console = Console()
 
@@ -41,7 +41,8 @@ console = Console()
     help="Configuration file path",
 )
 @click.option(
-    "--verbose", "-v",
+    "--verbose",
+    "-v",
     is_flag=True,
     help="Enable verbose output",
 )
@@ -204,7 +205,7 @@ def ingest(
     settings = ctx.obj["settings"]
     logger = get_logger(__name__)
 
-    console.print(f"[bold]LSST Extendedness Pipeline - Ingestion[/bold]")
+    console.print("[bold]LSST Extendedness Pipeline - Ingestion[/bold]")
     console.print(f"Source: [cyan]{source}[/cyan]")
 
     # Initialize storage
@@ -215,6 +216,7 @@ def ingest(
     # Create source
     if source == "mock":
         from lsst_extendedness.sources import MockSource
+
         alert_source = MockSource(count=count)
         console.print(f"Generating {count} mock alerts")
     elif source == "file":
@@ -222,10 +224,12 @@ def ingest(
             console.print("[red]Error:[/red] --path required for file source")
             return
         from lsst_extendedness.sources import FileSource
+
         alert_source = FileSource(path)
         console.print(f"Reading from: {path}")
     else:
         from lsst_extendedness.sources import KafkaSource
+
         kafka_topic = topic or settings.kafka.topic
         alert_source = KafkaSource(
             settings.kafka.to_consumer_config(),
@@ -321,7 +325,6 @@ def process(
     Results are stored in the processing_results table.
     """
     settings = ctx.obj["settings"]
-    logger = get_logger(__name__)
 
     # Initialize storage
     db_path = settings.database_path
@@ -387,14 +390,10 @@ def process(
         for result in batch_result.results:
             if result.success:
                 console.print(
-                    f"  [green]✓[/green] {result.processor_name}: "
-                    f"{result.result.summary}"
+                    f"  [green]✓[/green] {result.processor_name}: " f"{result.result.summary}"
                 )
             else:
-                console.print(
-                    f"  [red]✗[/red] {result.processor_name}: "
-                    f"{result.error_message}"
-                )
+                console.print(f"  [red]✗[/red] {result.processor_name}: " f"{result.error_message}")
 
         console.print()
         console.print(
@@ -613,6 +612,7 @@ def health_check(ctx: click.Context) -> None:
 
     # Check Python
     import sys
+
     console.print(f"Python: [green]{sys.version.split()[0]}[/green]")
 
     # Check database
@@ -624,11 +624,12 @@ def health_check(ctx: click.Context) -> None:
         console.print(f"Database: [green]OK[/green] ({count:,} alerts)")
         storage.close()
     else:
-        console.print(f"Database: [yellow]Not initialized[/yellow]")
+        console.print("Database: [yellow]Not initialized[/yellow]")
 
     # Check Kafka (optional)
     try:
         import confluent_kafka  # noqa: F401
+
         console.print("Kafka client: [green]Installed[/green]")
     except ImportError:
         console.print("Kafka client: [yellow]Not installed[/yellow]")
@@ -636,6 +637,7 @@ def health_check(ctx: click.Context) -> None:
     # Check pandas
     try:
         import pandas
+
         console.print(f"Pandas: [green]{pandas.__version__}[/green]")
     except ImportError:
         console.print("Pandas: [red]Not installed[/red]")
@@ -643,6 +645,7 @@ def health_check(ctx: click.Context) -> None:
     # Check numpy BLAS
     try:
         import numpy as np
+
         console.print(f"NumPy: [green]{np.__version__}[/green]")
     except ImportError:
         console.print("NumPy: [red]Not installed[/red]")

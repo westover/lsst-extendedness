@@ -14,6 +14,7 @@ import structlog
 
 if TYPE_CHECKING:
     import pandas as pd
+
     from ..storage.sqlite import SQLiteStorage
 
 logger = structlog.get_logger(__name__)
@@ -22,7 +23,7 @@ ExportFormat = Literal["csv", "parquet", "json", "excel"]
 
 
 def export_query(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     query: str,
     output_path: Path | str,
     params: tuple = (),
@@ -52,7 +53,7 @@ def export_query(
 
 
 def export_dataframe(
-    df: "pd.DataFrame",
+    df: pd.DataFrame,
     output_path: Path | str,
     format: ExportFormat = "csv",
     **kwargs,
@@ -93,7 +94,7 @@ def export_dataframe(
 
 
 def export_today(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     output_dir: Path | str = "exports",
     format: ExportFormat = "csv",
 ) -> Path:
@@ -120,7 +121,7 @@ def export_today(
 
 
 def export_recent(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     days: int = 7,
     output_dir: Path | str = "exports",
     format: ExportFormat = "csv",
@@ -154,7 +155,7 @@ def export_recent(
 
 
 def export_minimoon_candidates(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     output_dir: Path | str = "exports",
     format: ExportFormat = "csv",
 ) -> Path:
@@ -181,7 +182,7 @@ def export_minimoon_candidates(
 
 
 def export_processing_results(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     processor_name: str | None = None,
     output_dir: Path | str = "exports",
     format: ExportFormat = "json",
@@ -219,7 +220,7 @@ def export_processing_results(
 
 
 def export_sso_summary(
-    storage: "SQLiteStorage",
+    storage: SQLiteStorage,
     output_dir: Path | str = "exports",
     format: ExportFormat = "csv",
 ) -> Path:
@@ -272,7 +273,7 @@ class DataExporter:
 
     def __init__(
         self,
-        storage: "SQLiteStorage",
+        storage: SQLiteStorage,
         output_dir: Path | str = "exports",
         default_format: ExportFormat = "csv",
     ):

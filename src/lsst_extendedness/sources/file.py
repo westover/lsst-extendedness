@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 from lsst_extendedness.models.alerts import AlertRecord
 from lsst_extendedness.sources.protocol import register_source
@@ -171,8 +170,7 @@ class FileSource:
             import fastavro
         except ImportError as e:
             raise ImportError(
-                "fastavro is required for AVRO files. "
-                "Install with: pdm install"
+                "fastavro is required for AVRO files. " "Install with: pdm install"
             ) from e
 
         count = current_count
