@@ -27,6 +27,7 @@ repos:
 
       # Check YAML/TOML syntax
       - id: check-yaml
+        args: ['--unsafe']  # Allow Python-specific tags in mkdocs.yml
       - id: check-toml
 
       # Check JSON syntax
