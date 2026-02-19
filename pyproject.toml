@@ -40,9 +40,9 @@ dependencies = [
     "astropy>=6.0.0",
 
     # ANTARES broker (primary alert source)
-    # bson-modern is a Python 3.12+ compatible fork of bson
-    # (required by antares-client, original bson only supports Python 3.6)
-    "bson-modern>=1.0.0",
+    # bson-modern is a Python 3.9+ compatible fork of bson
+    # (required by antares-client, original bson is unmaintained since 2019)
+    "bson-modern>=1.1.0",
     "antares-client>=1.3.0",
 
     # Database (SQLite is built-in, this is for type hints)
