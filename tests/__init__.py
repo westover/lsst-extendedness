@@ -146,10 +146,10 @@ def get_mock_alert_with_trail() -> dict:
 
 
 __all__ = [
-    "get_test_data_dir",
     "get_mock_alert",
-    "get_mock_alert_no_sso",
     "get_mock_alert_extended",
+    "get_mock_alert_no_sso",
     "get_mock_alert_point_source",
     "get_mock_alert_with_trail",
+    "get_test_data_dir",
 ]

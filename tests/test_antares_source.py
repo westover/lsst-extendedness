@@ -508,6 +508,221 @@ class TestANTARESSourceSSExtraction:
         assert reassoc_time is None
 
 
+class TestANTARESSourceErrorHandling:
+    """Tests for ANTARESSource error handling."""
+
+    @patch("lsst_extendedness.sources.antares._import_antares_client")
+    def test_fetch_with_locus_conversion_error(self, mock_import):
+        """Test that conversion errors are handled gracefully."""
+        # Create a locus with an alert that will raise an exception
+        bad_alert = MagicMock()
+        bad_alert.alert_id = "bad"
+        bad_alert.mjd = 60000.0
+        bad_alert.properties = None  # Will cause AttributeError
+
+        bad_locus = MagicMock()
+        bad_locus.locus_id = "BAD_LOCUS"
+        bad_locus.alerts = [bad_alert]
+
+        good_alert = MockAlert()
+        good_locus = MockLocus(locus_id="GOOD_LOCUS", alerts=[good_alert])
+
+        mock_client = MagicMock()
+        mock_client.iter.return_value = [("topic", bad_locus), ("topic", good_locus)]
+
+        mock_module = MagicMock()
+        mock_module.StreamingClient.return_value = mock_client
+        mock_import.return_value = mock_module
+
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+        source.connect()
+        source._client = mock_client
+
+        # Should skip bad locus and return good one
+        alerts = list(source.fetch_alerts())
+        assert len(alerts) == 1
+
+    @patch("lsst_extendedness.sources.antares._import_antares_client")
+    def test_fetch_with_keyboard_interrupt(self, mock_import):
+        """Test that KeyboardInterrupt is handled gracefully."""
+        mock_client = MagicMock()
+
+        def raise_keyboard_interrupt():
+            raise KeyboardInterrupt()
+
+        mock_client.iter.side_effect = raise_keyboard_interrupt
+
+        mock_module = MagicMock()
+        mock_module.StreamingClient.return_value = mock_client
+        mock_import.return_value = mock_module
+
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+        source.connect()
+        source._client = mock_client
+
+        # Should not raise, just stop iterating
+        alerts = list(source.fetch_alerts())
+        assert len(alerts) == 0
+
+    @patch("lsst_extendedness.sources.antares._import_antares_client")
+    def test_fetch_with_generic_exception(self, mock_import):
+        """Test that generic exceptions are re-raised."""
+        mock_client = MagicMock()
+        mock_client.iter.side_effect = RuntimeError("Network error")
+
+        mock_module = MagicMock()
+        mock_module.StreamingClient.return_value = mock_client
+        mock_import.return_value = mock_module
+
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+        source.connect()
+        source._client = mock_client
+
+        with pytest.raises(RuntimeError, match="Network error"):
+            list(source.fetch_alerts())
+
+    @patch("lsst_extendedness.sources.antares._import_antares_client")
+    def test_close_handles_exception(self, mock_import):
+        """Test that close() handles exceptions gracefully."""
+        mock_client = MagicMock()
+        mock_client.close.side_effect = Exception("Close failed")
+
+        mock_module = MagicMock()
+        mock_module.StreamingClient.return_value = mock_client
+        mock_import.return_value = mock_module
+
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+        source.connect()
+        source._client = mock_client
+
+        # Should not raise
+        source.close()
+        assert source._connected is False
+        assert source._client is None
+
+    @patch("lsst_extendedness.sources.antares._import_antares_client")
+    def test_fetch_locus_history_with_limit(self, mock_import):
+        """Test fetch with locus history and limit."""
+        # Create locus with multiple alerts
+        alerts = [MockAlert(alert_id=str(i), mjd=60000.0 + i) for i in range(5)]
+        locus = MockLocus(alerts=alerts)
+
+        mock_client = MagicMock()
+        mock_client.iter.return_value = [("topic", locus)]
+
+        mock_module = MagicMock()
+        mock_module.StreamingClient.return_value = mock_client
+        mock_import.return_value = mock_module
+
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+            include_locus_history=True,
+        )
+        source.connect()
+        source._client = mock_client
+
+        # Fetch with limit less than alerts in history
+        result = list(source.fetch_alerts(limit=3))
+        assert len(result) == 3
+
+    def test_convert_locus_history_empty_alerts(self):
+        """Test _convert_locus_history with empty alerts."""
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+
+        locus = MockLocus(alerts=[])
+        results = list(source._convert_locus_history(locus))
+        assert len(results) == 0
+
+    def test_create_alert_record_exception(self):
+        """Test _create_alert_record handles exceptions."""
+        source = ANTARESSource(
+            topics=["test"],
+            api_key="key",
+            api_secret="secret",
+        )
+
+        # Create mock with broken data that will cause exception
+        bad_locus = MagicMock()
+        bad_locus.ra = "not a number"  # Will fail validation
+        bad_locus.dec = "also bad"
+
+        bad_alert = MagicMock()
+        bad_alert.alert_id = "test"
+        bad_alert.mjd = "not a float"
+
+        bad_props = {"ra": "invalid", "decl": "invalid", "midPointTai": "bad"}
+
+        result = source._create_alert_record(bad_locus, bad_alert, bad_props)
+        assert result is None
+
+
+class TestANTARESImportError:
+    """Tests for antares-client import error handling."""
+
+    def test_import_error_when_not_installed(self):
+        """Test ImportError when antares-client is not installed."""
+        import builtins
+        import sys
+
+        import lsst_extendedness.sources.antares as antares_module
+
+        # Store original
+        original = antares_module._antares_client
+        original_import = builtins.__import__
+
+        # Reset to None to force re-import
+        antares_module._antares_client = None
+
+        # Remove from sys.modules if present
+        if "antares_client" in sys.modules:
+            del sys.modules["antares_client"]
+
+        def mock_import(name, *args, **kwargs):
+            if name == "antares_client":
+                raise ImportError("No module named 'antares_client'")
+            return original_import(name, *args, **kwargs)
+
+        builtins.__import__ = mock_import
+
+        try:
+            # Create fresh source
+            source = ANTARESSource(
+                topics=["test"],
+                api_key="key",
+                api_secret="secret",
+            )
+
+            # Connect should fail with ImportError
+            with pytest.raises(ImportError, match="antares-client is required"):
+                source.connect()
+        finally:
+            # Restore
+            builtins.__import__ = original_import
+            antares_module._antares_client = original
+
+
 class TestANTARESSourceRegistration:
     """Tests for source registration."""
 
