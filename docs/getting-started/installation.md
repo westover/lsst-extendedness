@@ -1,108 +1,123 @@
 # Installation
 
-## Requirements
+## Prerequisites
 
-- Python 3.12 or 3.13
-- System dependencies: `librdkafka-dev` (for Kafka connectivity)
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Python | 3.12+ | [pyenv](https://github.com/pyenv/pyenv) recommended for version management |
+| PDM | 2.0+ | [PDM](https://pdm-project.org/) - Modern Python package manager |
+| librdkafka | latest | Required for Kafka connectivity |
 
-## Using PDM (Recommended)
-
-[PDM](https://pdm-project.org/) is the recommended package manager for this project.
+## Quick Install
 
 ```bash
 # Clone the repository
-git clone https://github.com/westover/lsst-extendedness.git
+git clone https://github.com/fedorets/lsst-extendedness.git
 cd lsst-extendedness
 
-# Install PDM if needed
-pip install pdm
-
-# Install dependencies
+# Install dependencies with PDM
 pdm install
 
-# Install with dev tools
-pdm install -G dev
+# Verify installation
+pdm run pytest tests/ -x -q
 ```
 
-## Using pip
+That's it! You're ready to use the pipeline.
+
+## Detailed Setup
+
+### 1. Install PDM
+
+[PDM](https://pdm-project.org/) is a modern Python package manager with lockfile support.
 
 ```bash
-pip install lsst-extendedness
+# Using pipx (recommended)
+pipx install pdm
+
+# Or using pip
+pip install --user pdm
+
+# Verify
+pdm --version
 ```
 
-## System Dependencies
+### 2. System Dependencies
 
 === "Ubuntu/Debian"
 
     ```bash
     sudo apt-get update
-    sudo apt-get install -y librdkafka-dev libopenblas-dev
+    sudo apt-get install -y librdkafka-dev
     ```
 
 === "macOS"
 
     ```bash
-    brew install librdkafka openblas
+    brew install librdkafka
     ```
 
 === "RHEL/CentOS"
 
     ```bash
-    sudo yum install -y librdkafka-devel openblas-devel
+    sudo yum install -y librdkafka-devel
     ```
 
-## Bootstrap Script
-
-For a quick automated setup:
+### 3. Clone and Install
 
 ```bash
-./scripts/bootstrap.sh
-```
+git clone https://github.com/fedorets/lsst-extendedness.git
+cd lsst-extendedness
 
-This script:
+# Production install
+pdm install
 
-1. Checks Python version (3.12+ required)
-2. Installs PDM if needed
-3. Installs all dependencies
-4. Initializes the database
-5. Runs verification tests
-
-## Verify Installation
-
-```bash
-# Check CLI is available
-lsst-extendedness --version
-
-# Run tests
-pdm run pytest tests/ -v
-
-# Initialize database
-lsst-extendedness db-init
-```
-
-## Optional Dependencies
-
-### Thumbnails
-
-For generating PNG thumbnails from FITS cutouts:
-
-```bash
-pdm install -G thumbnails
-# or
-pip install lsst-extendedness[thumbnails]
-```
-
-### Development Tools
-
-For contributing to the project:
-
-```bash
+# Development install (includes testing tools)
 pdm install -G dev
 ```
 
-This includes:
+### 4. Initialize Database
 
-- pytest, pytest-cov (testing)
-- ruff (linting/formatting)
-- mypy (type checking)
-- pre-commit (git hooks)
+```bash
+pdm run lsst-extendedness db-init
+```
+
+## Tool Links
+
+| Tool | Purpose | Documentation |
+|------|---------|---------------|
+| [PDM](https://pdm-project.org/) | Package management | [User Guide](https://pdm-project.org/latest/usage/project/) |
+| [pytest](https://pytest.org/) | Testing | [Getting Started](https://docs.pytest.org/en/stable/getting-started.html) |
+| [ruff](https://docs.astral.sh/ruff/) | Linting & formatting | [Configuration](https://docs.astral.sh/ruff/configuration/) |
+| [mypy](https://mypy.readthedocs.io/) | Type checking | [Cheat Sheet](https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html) |
+| [pre-commit](https://pre-commit.com/) | Git hooks | [Hooks](https://pre-commit.com/hooks.html) |
+
+## Troubleshooting
+
+### LSST RSP Environment
+
+If installing in an existing LSST RSP environment, use a fresh virtual environment:
+
+```bash
+# Create isolated venv
+pdm venv create
+pdm use .venv/bin/python
+pdm install
+```
+
+### Dependency Conflicts
+
+If you see `httpx` or `urllib3` conflicts:
+
+```bash
+# Use PDM's isolated environment
+pdm install --no-self
+
+# Or create a fresh venv
+python -m venv .venv
+source .venv/bin/activate
+pdm install
+```
+
+## Next Steps
+
+→ [Quick Start](quickstart.md) - Run your first ingestion
