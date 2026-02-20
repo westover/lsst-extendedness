@@ -165,18 +165,33 @@ jobs:
             --cov-fail-under=85
 
   # ============================================================================
-  # FRESH INSTALL TEST (Docker-based, manual/scheduled only)
+  # FRESH INSTALL TEST (Docker-based)
+  # Runs on: schedule, manual trigger, or dependency file changes
   # ============================================================================
   fresh-install:
     name: Fresh Install Test
     runs-on: ubuntu-latest
-    # Only run on manual trigger or schedule, not every PR
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need history for file change detection
+
+      - name: Check for dependency changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            deps:
+              - 'pyproject.toml'
+              - 'pdm.lock'
 
       - name: Test fresh install in Docker
+        # Run if: schedule, manual trigger, or dependency files changed
+        if: >
+          github.event_name == 'workflow_dispatch' ||
+          github.event_name == 'schedule' ||
+          steps.changes.outputs.deps == 'true'
         run: |
           docker run --rm -v ${{ github.workspace }}:/app -w /app python:3.13-slim bash -c '
             set -e
