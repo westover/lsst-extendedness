@@ -1,65 +1,92 @@
 # Quick Start
 
-Get up and running in under 5 minutes.
+Get the LSST Extendedness Pipeline running in 5 minutes.
 
-## 1. Initialize Database
+## Prerequisites
+
+| Requirement | Version | Install |
+|-------------|---------|---------|
+| Python | 3.12+ | [pyenv](https://github.com/pyenv/pyenv) |
+| PDM | 2.0+ | `pip install pdm` |
+| librdkafka | latest | See below |
+
+### System Dependencies
+
+=== "macOS"
+
+    ```bash
+    brew install librdkafka
+    ```
+
+=== "Ubuntu/Debian"
+
+    ```bash
+    sudo apt-get install -y librdkafka-dev
+    ```
+
+=== "RHEL/CentOS"
+
+    ```bash
+    sudo yum install -y librdkafka-devel
+    ```
+
+## Install
 
 ```bash
-pdm run lsst-extendedness db-init
+# Clone and install
+git clone https://github.com/westover/lsst-extendedness.git
+cd lsst-extendedness
+pdm install
+
+# Verify
+pdm run pytest tests/ -x -q
 ```
 
-## 2. Ingest Test Data
+## First Run
 
 ```bash
-# Using mock data (no external dependencies)
+# 1. Initialize database
+pdm run lsst-extendedness db-init
+
+# 2. Ingest test data
 pdm run lsst-extendedness ingest --source mock --count 100
 
-# Check it worked
+# 3. Check it worked
 pdm run lsst-extendedness db-stats
 ```
 
-## 3. Query Data (Python)
+## Python API
+
+### Query with SQLiteStorage
 
 ```python
 from lsst_extendedness.storage import SQLiteStorage
-from lsst_extendedness.sources import FinkSource
 
-# Option A: Query existing data
 storage = SQLiteStorage("data/lsst_extendedness.db")
 storage.initialize()
 
 count = storage.get_alert_count()
 print(f"Total alerts: {count}")
-
-# Option B: Use Fink fixtures (real ZTF data, no credentials)
-with FinkSource() as source:
-    for alert in source.fetch_alerts(limit=5):
-        print(f"Alert {alert.alert_id}: RA={alert.ra:.2f}, Dec={alert.dec:.2f}")
 ```
 
-## 4. Test with Real Astronomical Data
-
-The `FinkSource` provides real ZTF alert data without requiring credentials:
+### Load Real ZTF Data (No Credentials)
 
 ```python
 from lsst_extendedness.sources import FinkSource
 
-# Load real ZTF alerts from fixtures
-source = FinkSource()
-source.connect()
+# FinkSource includes real ZTF alert fixtures
+with FinkSource() as source:
+    for alert in source.fetch_alerts(limit=5):
+        print(f"Alert {alert.alert_id}: RA={alert.ra:.2f}, Dec={alert.dec:.2f}")
 
-# Fetch alerts
-alerts = list(source.fetch_alerts(limit=10))
-print(f"Loaded {len(alerts)} real ZTF alerts")
-
-# Check for SSO (Solar System Objects)
-sso_alerts = [a for a in alerts if a.has_ss_source]
-print(f"SSO alerts: {len(sso_alerts)}")
-
-source.close()
+# Check for Solar System Objects
+with FinkSource() as source:
+    alerts = list(source.fetch_alerts(limit=10))
+    sso_alerts = [a for a in alerts if a.has_ss_source]
+    print(f"SSO alerts: {len(sso_alerts)}")
 ```
 
-## 5. Production: ANTARES Broker
+### Production: ANTARES Broker
 
 For real-time LSST alerts (requires credentials):
 
@@ -73,15 +100,33 @@ pdm run lsst-extendedness ingest \
     --limit 1000
 ```
 
-## Common Commands
+## Command Reference
 
 | Command | Description |
 |---------|-------------|
 | `pdm run lsst-extendedness db-init` | Initialize database |
-| `pdm run lsst-extendedness db-stats` | Show database statistics |
+| `pdm run lsst-extendedness db-stats` | Show statistics |
 | `pdm run lsst-extendedness ingest --source mock --count N` | Ingest N mock alerts |
+| `pdm run lsst-extendedness ingest --source fink` | Ingest from Fink fixtures |
 | `pdm run lsst-extendedness query --recent 7` | Query last 7 days |
 | `pdm run pytest tests/ -v` | Run tests |
+
+## Troubleshooting
+
+### LSST RSP Environment
+
+If installing in an existing LSST RSP environment with dependency conflicts:
+
+```bash
+# Create isolated venv
+pdm venv create
+pdm use .venv/bin/python
+pdm install
+```
+
+### httpx Conflict
+
+If you see `lsst-rsp requires httpx<0.28` errors, the package already pins `httpx<0.28` for compatibility.
 
 ## Next Steps
 
