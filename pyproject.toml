@@ -88,6 +88,12 @@ thumbnails = [
     "pillow>=10.1.0",
 ]
 
+spacerocks = [
+    # For known asteroid orbit data from JPL Horizons
+    # Note: Requires Python <3.14 due to pydantic-core dependency
+    "space-rocks>=1.9.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/westover/lsst-extendedness"
 Documentation = "https://github.com/westover/lsst-extendedness#readme"
