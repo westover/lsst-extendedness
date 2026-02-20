@@ -48,8 +48,9 @@ dependencies = [
     # Database (SQLite is built-in, this is for type hints)
 
     # HTTP (for schema registry, etc.)
-    "requests>=2.31.0",
-    "httpx>=0.25.0",
+    # Pin httpx<0.28 for compatibility with lsst-rsp
+    "requests>=2.28.0",
+    "httpx>=0.25.0,<0.28",
 
     # Logging
     "structlog>=23.2.0",
